@@ -8,12 +8,17 @@
    - Particles and floaters are drawn with no shadow at all.
    ============================================================ */
 import { game, comboMult } from './state.js';
-import { ctx, W, H } from './canvas.js';
+import { ctx, W, H, WORLD_W, WORLD_H, camX, camY } from './canvas.js';
 import { rand, clamp, TAU } from './utils.js';
 import { touch } from './input.js';
 
+const mmCv = document.getElementById('minimap');
+const mmCtx = mmCv ? mmCv.getContext('2d') : null;
+const MM_W = 140, MM_H = 105;
+
 let gridOff = 0;
 let stars = null;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function initStars() {
   stars = [];
@@ -31,14 +36,18 @@ function initStars() {
 export function render() {
   ctx.clearRect(0, 0, W, H);
 
-  // screen shake
+  // screen shake (capped, skipped for vestibular sensitivity)
   let sx = 0, sy = 0;
-  if (game.shake > 0) { sx = rand(-game.shake, game.shake); sy = rand(-game.shake, game.shake); }
+  if (game.shake > 0 && !reduceMotion) {
+    const s = Math.min(game.shake, 10);
+    sx = rand(-s, s); sy = rand(-s, s);
+  }
   ctx.save();
-  ctx.translate(sx, sy);
+  ctx.translate(sx - camX, sy - camY);
 
   drawStars();
   drawGrid();
+  drawWorldBorder();
 
   const p = game.player;
 
@@ -48,10 +57,11 @@ export function render() {
   drawParticles();
   if (p) { drawPlayer(p); drawOrbs(p); }
   drawFloaters();
+  ctx.restore();
+
+  // screen-space overlays (not affected by camera)
   if (p) drawDangerIndicators(p);
   drawTouchJoystick();
-
-  ctx.restore();
 
   // full-screen bomb flash (drawn unshaken)
   if (game.flash > 0) {
@@ -89,8 +99,11 @@ export function render() {
     const a = clamp(game.graceTimer / 1.5, 0, 1) * 0.3;
     ctx.strokeStyle = 'rgba(95,230,196,' + a + ')';
     ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 18, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x - camX, p.y - camY, p.r + 18, 0, TAU); ctx.stroke();
   }
+
+  // minimap
+  drawMinimap(p);
 }
 
 function drawGrid() {
@@ -345,12 +358,13 @@ function drawDangerIndicators(p) {
   const margin = 18;
   for (const e of game.enemies) {
     if (e.dead) continue;
-    // only show for enemies actually off-screen
-    if (e.x > margin && e.x < W - margin && e.y > margin && e.y < H - margin) continue;
+    // convert to screen space
+    const sx = e.x - camX, sy = e.y - camY;
+    // only show for enemies off-screen
+    if (sx > margin && sx < W - margin && sy > margin && sy < H - margin) continue;
     const ang = Math.atan2(e.y - p.y, e.x - p.x);
-    // clamp indicator to screen edge
-    const ix = clamp(e.x, margin, W - margin);
-    const iy = clamp(e.y, margin, H - margin);
+    const ix = clamp(sx, margin, W - margin);
+    const iy = clamp(sy, margin, H - margin);
     const size = e.isElite ? 7 : 4;
     ctx.save();
     ctx.translate(ix, iy);
@@ -377,4 +391,36 @@ function drawTouchJoystick() {
   ctx.fillStyle = '#f3ead7';
   ctx.beginPath(); ctx.arc(touch.x, touch.y, 12, 0, TAU); ctx.fill();
   ctx.globalAlpha = 1;
+}
+
+function drawWorldBorder() {
+  ctx.strokeStyle = 'rgba(154,123,255,0.2)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+}
+
+function drawMinimap(p) {
+  if (!mmCtx) return;
+  const sx = MM_W / WORLD_W, sy = MM_H / WORLD_H;
+  mmCtx.clearRect(0, 0, MM_W, MM_H);
+
+  // viewport rect
+  mmCtx.strokeStyle = 'rgba(243,234,215,0.3)';
+  mmCtx.lineWidth = 1;
+  mmCtx.strokeRect(camX * sx, camY * sy, W * sx, H * sy);
+
+  // enemies as dots
+  for (const e of game.enemies) {
+    if (e.dead) continue;
+    mmCtx.fillStyle = e.isElite ? '#ff7ad0' : 'rgba(255,93,82,0.6)';
+    mmCtx.fillRect(e.x * sx - 1, e.y * sy - 1, 2, 2);
+  }
+
+  // player
+  if (p) {
+    mmCtx.fillStyle = '#f3ead7';
+    mmCtx.beginPath();
+    mmCtx.arc(p.x * sx, p.y * sy, 3, 0, TAU);
+    mmCtx.fill();
+  }
 }

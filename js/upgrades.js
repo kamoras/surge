@@ -2,8 +2,13 @@
    Level-up upgrade selection screen.
 
    offerUpgrades() builds three cards from the UPGRADES table and
-   pauses the sim into the 'levelup' state. Picking a card applies it
-   and resumes (or re-offers if multiple levels were banked at once).
+   pauses the sim into the 'levelup' state. Picking a card applies
+   it and resumes (or re-offers if multiple levels were banked).
+
+   Tier filtering:
+   - Common: always available
+   - Rare: slight bias against early, but can appear any time
+   - Legendary: only offered at LV 5+, guaranteed one slot if eligible
    ============================================================ */
 import { game } from './state.js';
 import { UPGRADES } from './data.js';
@@ -11,21 +16,45 @@ import { randi } from './utils.js';
 import { $, show, hide } from './dom.js';
 
 export function offerUpgrades() {
-  const pool = [...UPGRADES];
+  const level = game.level;
+  const legendaryEligible = level >= 5;
+
+  // separate pools
+  const commons = UPGRADES.filter(u => u.tier === 'common');
+  const rares   = UPGRADES.filter(u => u.tier === 'rare');
+  const legends = UPGRADES.filter(u => u.tier === 'legendary');
+
   const chosen = [];
-  for (let i = 0; i < 3 && pool.length; i++) {
-    // bias slightly away from rares so commons stay accessible
-    let idx, tries = 0;
-    do { idx = randi(0, pool.length - 1); tries++; }
-    while (pool[idx].tier === 'rare' && Math.random() < 0.4 && tries < 4);
-    chosen.push(pool.splice(idx, 1)[0]);
+  const used = new Set();
+
+  function pickFrom(pool) {
+    const available = pool.filter(u => !used.has(u.id));
+    if (!available.length) return null;
+    const u = available[randi(0, available.length - 1)];
+    used.add(u.id);
+    return u;
+  }
+
+  // at LV 5+, guarantee one legendary slot
+  if (legendaryEligible && legends.length > 0 && Math.random() < 0.55) {
+    const leg = pickFrom(legends);
+    if (leg) chosen.push(leg);
+  }
+
+  // fill remaining slots
+  while (chosen.length < 3) {
+    // bias: 60% common, 40% rare
+    const pool = Math.random() < 0.6 ? commons : rares;
+    const pick = pickFrom(pool) || pickFrom(commons) || pickFrom(rares);
+    if (pick) chosen.push(pick);
+    else break;
   }
 
   const wrap = $('cards');
   wrap.innerHTML = '';
   chosen.forEach(u => {
     const el = document.createElement('div');
-    el.className = 'card';
+    el.className = 'card' + (u.tier === 'legendary' ? ' legendary' : '');
     el.style.setProperty('--accent', u.acc);
     el.innerHTML = `<div class="tier">${u.tier}</div>
       <div class="ic">${u.ic}</div>
@@ -35,7 +64,7 @@ export function offerUpgrades() {
     wrap.appendChild(el);
   });
 
-  $('lsub').textContent = 'Choose one — Level ' + game.level;
+  $('lsub').textContent = 'Choose one — Level ' + level;
   show('levelup');
   game.state = 'levelup';
 }
@@ -44,7 +73,7 @@ export function closeLevelUp() {
   hide('levelup');
   game.pendingLevels = Math.max(0, (game.pendingLevels || 1) - 1);
   if (game.pendingLevels > 0) {
-    offerUpgrades();           // more levels banked — pick again
+    offerUpgrades();
   } else {
     game.state = 'playing';
     game.lastT = performance.now();

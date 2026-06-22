@@ -75,21 +75,50 @@ function killEnemy(e) {
     Sound.comboFanfare(Math.floor(game.combo / 10));
     floatText(p.x, p.y - 40, game.combo + ' COMBO', '#ffce4f', true);
     burst(p.x, p.y, '#ffce4f', 18, 260);
-    game.shake = Math.min(game.shake + 8, 16);
-    // bonus XP drops at combo milestones (variable ratio reward)
+    game.shake = Math.min(game.shake + 4, 10);
+    // XP vacuum: pull ALL gems on screen to the player instantly
+    for (const g of game.gems) {
+      g.x = p.x + rand(-15, 15);
+      g.y = p.y + rand(-15, 15);
+    }
+    // bonus XP drops on top
     for (let i = 0; i < 3; i++) {
       game.gems.push({ kind: 'xp', x: p.x + rand(-20, 20), y: p.y + rand(-20, 20), val: 2, life: 10, bob: rand(0, TAU) });
     }
   }
 
-  game.shake = Math.min(game.shake + (e.type === 'tank' ? 9 : 4), 16);
+  // chain lightning: kills zap the nearest alive enemy
+  if (p.chainLightning) {
+    let nearest = null, nd = Infinity;
+    for (const other of game.enemies) {
+      if (other === e || other.dead) continue;
+      const d = (other.x - e.x) ** 2 + (other.y - e.y) ** 2;
+      if (d < nd && d < 180 * 180) { nd = d; nearest = other; }
+    }
+    if (nearest) {
+      damageEnemy(nearest, p.dmg * 0.4, nearest.x, nearest.y, false);
+      // lightning visual: line of particles between the two
+      const dx = nearest.x - e.x, dy = nearest.y - e.y;
+      const dist = Math.sqrt(nd) || 1;
+      for (let i = 0; i < 5; i++) {
+        const t = i / 5;
+        game.parts.push({
+          x: e.x + dx * t + (Math.random() - 0.5) * 8,
+          y: e.y + dy * t + (Math.random() - 0.5) * 8,
+          vx: 0, vy: 0, life: 0.2, max: 0.2, color: '#7bd0ff', size: 2.5,
+        });
+      }
+    }
+  }
+
+  game.shake = Math.min(game.shake + (e.type === 'tank' ? 5 : 2), 10);
   burst(e.x, e.y, e.color, e.isElite ? 40 : (e.type === 'tank' ? 22 : 12), e.isElite ? 360 : 240);
 
   if (e.isElite) {
     for (let i = 0; i < 6; i++) game.gems.push({ kind: 'xp', x: e.x + rand(-22, 22), y: e.y + rand(-22, 22), val: 3, life: 12, bob: rand(0, TAU) });
     game.gems.push({ kind: 'heart', x: e.x - 12, y: e.y, val: 0, life: 14, bob: 0 });
     if (Math.random() < 0.6) game.gems.push({ kind: 'bomb', x: e.x + 12, y: e.y, val: 0, life: 14, bob: 0 });
-    game.shake = Math.min(game.shake + 14, 22);
+    game.shake = Math.min(game.shake + 6, 12);
     floatText(e.x, e.y - e.r - 8, 'ELITE DOWN', '#ff7ad0', true);
   } else {
     const drops = e.type === 'tank' ? 3 : 1;
@@ -97,7 +126,7 @@ function killEnemy(e) {
       game.gems.push({ kind: 'xp', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), val: Math.ceil(e.xp / drops), life: 9, bob: rand(0, TAU) });
     }
     // small chance for any kill to drop a heart (variable ratio reward)
-    if (Math.random() < 0.04) {
+    if (Math.random() < 0.05) {
       game.gems.push({ kind: 'heart', x: e.x, y: e.y, val: 0, life: 10, bob: 0 });
     }
     if (e.type === 'splitter') {
@@ -108,7 +137,7 @@ function killEnemy(e) {
 
 export function detonateBomb(x, y) {
   Sound.bomb();
-  game.shake = 22; game.flash = 0.55;
+  game.shake = Math.min(game.shake + 8, 12); game.flash = 0.55;
   burst(x, y, '#ff9d3d', 64, 440);
   const dmg = 120 + game.time * 1.4;
   for (const e of game.enemies) { if (!e.dead) damageEnemy(e, dmg, e.x, e.y, false); }
@@ -136,7 +165,7 @@ export function collectGem(g) {
   while (game.xp >= game.xpNeed) {
     game.xp -= game.xpNeed;
     game.level++;
-    game.xpNeed = Math.round(4 + game.level * 3.5 + game.level * game.level * 0.35);
+    game.xpNeed = Math.round(4 + game.level * 3.5 + game.level * game.level * 0.42);
     game.pendingLevels = (game.pendingLevels || 0) + 1;
     leveled = true;
   }
@@ -148,7 +177,7 @@ function onLevelUp() {
   game.slow = 0.55;
   burst(game.player.x, game.player.y, '#ffce4f', 26, 300);
   floatText(game.player.x, game.player.y - 26, 'LEVEL ' + game.level, '#ffce4f', true);
-  game.shake = 12;
+  game.shake = Math.min(game.shake + 5, 8);
   setTimeout(() => { if (game.state === 'playing') offerUpgrades(); }, 260);
 }
 
@@ -162,7 +191,7 @@ export function hurtPlayer(dmg) {
   if (lostCombo >= 5) game.comboLostFlash = 0.5;
   Sound.hurt();
   if (navigator.vibrate) navigator.vibrate(p.hp <= 0 ? [100, 50, 200] : 40);
-  game.shake = Math.min(game.shake + 10, 18);
+  game.shake = Math.min(game.shake + 5, 10);
   burst(p.x, p.y, '#ff5d52', 10, 200);
   floatText(p.x, p.y - p.r - 4, '-' + dmg, '#ff5d52', false);
   if (p.hp <= 0) { p.hp = 0; triggerDeath(); }

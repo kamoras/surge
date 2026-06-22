@@ -9,7 +9,7 @@
    - Death state runs slow-mo for 1.2s before game over (peak-end rule)
    ============================================================ */
 import { game } from './state.js';
-import { W, H } from './canvas.js';
+import { W, H, WORLD_W, WORLD_H, camX, camY, updateCamera } from './canvas.js';
 import { keys, touch } from './input.js';
 import { rand, randi, clamp, lerp, dist2, TAU, compactInPlace } from './utils.js';
 import { spawnEnemy, spawnElite } from './entities.js';
@@ -43,6 +43,7 @@ export function update(dt) {
   updateWaves();
   updateMilestones();
   updatePlayerMovement(p, dt);
+  updateCamera(p.x, p.y);
   updatePlayerTimers(p, dt);
   updateAimAndFire(p, dt);
   updateBullets(dt);
@@ -77,12 +78,12 @@ function updateSpawning(dt) {
   const ddaFactor = hpRatio < 0.3 ? 1.6 : hpRatio < 0.5 ? 1.2 : 1.0;
 
   // faster spawns in the first 8 seconds so the game feels immediate
-  const baseInterval = t < 8 ? 0.7 : 1.1 - t * 0.012;
+  const baseInterval = t < 8 ? 0.7 : 1.15 - t * 0.009;
   const spawnInterval = Math.max(0.16, baseInterval * ddaFactor);
   game.spawnTimer -= dt;
   if (game.spawnTimer <= 0) {
     game.spawnTimer = spawnInterval;
-    let count = 1 + Math.floor(t / 45);
+    let count = 1 + Math.floor(t / 40);
     if (t > 20 && Math.random() < 0.12) count += randi(2, 4);
     for (let i = 0; i < count; i++) spawnEnemy();
   }
@@ -94,8 +95,8 @@ function updateWaves() {
   if (game.waveNum >= WAVES.length) return;
   const [startTime, label] = WAVES[game.waveNum];
   if (game.time >= startTime) {
-    floatText(W / 2, H / 2 - 60, label, '#9a7bff', true);
-    game.shake = Math.min(game.shake + 6, 14);
+    floatText(camX + W / 2, camY + H / 2 - 60, label, '#9a7bff', true);
+    game.shake = Math.min(game.shake + 3, 8);
     Sound.level();
     game.waveNum++;
     // brief lull between waves: 1.5s of no spawns (tension-release cycle)
@@ -107,9 +108,9 @@ function updateMilestones() {
   if (game.nextMilestone >= MILESTONES.length) return;
   const target = MILESTONES[game.nextMilestone];
   if (game.kills >= target) {
-    floatText(W / 2, H / 2, target + ' KILLS', '#ffce4f', true);
+    floatText(camX + W / 2, camY + H / 2, target + ' KILLS', '#ffce4f', true);
     game.score += target;
-    game.shake = Math.min(game.shake + 8, 14);
+    game.shake = Math.min(game.shake + 4, 8);
     burst(game.player.x, game.player.y, '#ffce4f', 16, 240);
     Sound.pickup();
     game.nextMilestone++;
@@ -130,8 +131,8 @@ function updatePlayerMovement(p, dt) {
   if (p.dashing > 0) {
     p.dashing -= dt;
     game.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 0.2, max: 0.2, color: 'rgba(154,123,255,0.55)', size: 7 });
-    p.x = clamp(p.x + p.dashVX * dt, p.r, W - p.r);
-    p.y = clamp(p.y + p.dashVY * dt, p.r, H - p.r);
+    p.x = clamp(p.x + p.dashVX * dt, p.r, WORLD_W - p.r);
+    p.y = clamp(p.y + p.dashVY * dt, p.r, WORLD_H - p.r);
     for (const e of game.enemies) {
       if (e.dead || e.orbCd > 0) continue;
       const rr = e.r + p.r + 6;
@@ -141,9 +142,22 @@ function updatePlayerMovement(p, dt) {
       }
     }
     p.dashVX *= 0.84; p.dashVY *= 0.84;
+    // void dash: explode at end of dash
+    if (p.dashExplode && p.dashing <= 0) {
+      const dmg = p.dmg * 3;
+      const r2 = 110 * 110;
+      burst(p.x, p.y, '#9a7bff', 30, 320);
+      game.shake = Math.min(game.shake + 5, 10);
+      for (const e of game.enemies) {
+        if (e.dead) continue;
+        if (dist2(p.x, p.y, e.x, e.y) < r2) {
+          damageEnemy(e, dmg, p.x, p.y, true);
+        }
+      }
+    }
   } else {
-    p.x = clamp(p.x + mx * p.speed * dt, p.r, W - p.r);
-    p.y = clamp(p.y + my * p.speed * dt, p.r, H - p.r);
+    p.x = clamp(p.x + mx * p.speed * dt, p.r, WORLD_W - p.r);
+    p.y = clamp(p.y + my * p.speed * dt, p.r, WORLD_H - p.r);
     // subtle movement trail when actively moving
     if (mag > 0 && Math.random() < 0.35) {
       game.parts.push({ x: p.x - mx * 8, y: p.y - my * 8, vx: 0, vy: 0, life: 0.15, max: 0.15, color: 'rgba(243,234,215,0.2)', size: 2.5 });
@@ -176,7 +190,7 @@ function updateAimAndFire(p, dt) {
 function updateBullets(dt) {
   compactInPlace(game.bullets, b => {
     b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
-    if (b.life <= 0 || b.x < -30 || b.x > W + 30 || b.y < -30 || b.y > H + 30) return false;
+    if (b.life <= 0 || b.x < -30 || b.x > WORLD_W + 30 || b.y < -30 || b.y > WORLD_H + 30) return false;
     for (const e of game.enemies) {
       if (e.dead) continue;
       if (b.hits && b.hits.has(e)) continue;

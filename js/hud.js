@@ -113,7 +113,7 @@ export function triggerDeath() {
   Sound.over();
   burst(game.player.x, game.player.y, '#ff5d52', 50, 400);
   burst(game.player.x, game.player.y, '#ffce4f', 20, 300);
-  game.shake = 24;
+  game.shake = 10;
 }
 
 /** Called after death slow-mo completes. Shows the game-over screen. */
