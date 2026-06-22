@@ -3,6 +3,10 @@
 
    Firing, damage (with crits + fury), enemy death + rewards, bomb
    detonation, gem/heart/bomb collection, and the level-up trigger.
+
+   The kill() function implements variable-ratio reinforcement:
+   every 10th combo hit triggers a fanfare and bonus XP drops,
+   and the kill sound pitch escalates with the combo counter.
    ============================================================ */
 import { game, comboMult, COMBO_WINDOW } from './state.js';
 import { rand, clamp, TAU } from './utils.js';
@@ -10,12 +14,11 @@ import { Sound } from './audio.js';
 import { burst, floatText } from './effects.js';
 import { addEnemy } from './entities.js';
 import { offerUpgrades } from './upgrades.js';
-import { endGame } from './hud.js';
+import { triggerDeath } from './hud.js';
 
 export function fireWeapon(p) {
   const n = p.projCount;
   const base = p.aim;
-  // fury bonus: combo scales damage when the upgrade is taken
   const fury = p.furyScale > 0
     ? 1 + clamp(game.combo * p.furyScale, 0, 0.72)
     : 1;
@@ -32,7 +35,6 @@ export function fireWeapon(p) {
   p.muzzle = 0.06;
 }
 
-/** Apply damage at (x,y); `canCrit` enables a player crit roll. */
 export function damageEnemy(e, dmg, x, y, canCrit) {
   const p = game.player;
   let isCrit = false;
@@ -53,7 +55,22 @@ function killEnemy(e) {
   if (game.combo > game.maxCombo) game.maxCombo = game.combo;
   game.score += Math.round(e.score * comboMult());
   if (p.lifesteal > 0) p.hp = Math.min(p.maxHp, p.hp + p.lifesteal);
-  Sound.kill();
+
+  // escalating kill pitch (variable ratio audio reinforcement)
+  Sound.kill(game.combo);
+
+  // combo milestone fanfare every 10 kills in a combo (variable ratio reward)
+  if (game.combo > 0 && game.combo % 10 === 0) {
+    Sound.comboFanfare(Math.floor(game.combo / 10));
+    floatText(p.x, p.y - 40, game.combo + ' COMBO', '#ffce4f', true);
+    burst(p.x, p.y, '#ffce4f', 18, 260);
+    game.shake = Math.min(game.shake + 8, 16);
+    // bonus XP drops at combo milestones (variable ratio reward)
+    for (let i = 0; i < 3; i++) {
+      game.gems.push({ kind: 'xp', x: p.x + rand(-20, 20), y: p.y + rand(-20, 20), val: 2, life: 10, bob: rand(0, TAU) });
+    }
+  }
+
   game.shake = Math.min(game.shake + (e.type === 'tank' ? 9 : 4), 16);
   burst(e.x, e.y, e.color, e.isElite ? 40 : (e.type === 'tank' ? 22 : 12), e.isElite ? 360 : 240);
 
@@ -74,7 +91,6 @@ function killEnemy(e) {
   }
 }
 
-/** Screen-clearing blast: heavy damage to every enemy + a white flash. */
 export function detonateBomb(x, y) {
   Sound.bomb();
   game.shake = 22; game.flash = 0.55;
@@ -123,11 +139,15 @@ function onLevelUp() {
 
 export function hurtPlayer(dmg) {
   const p = game.player;
+  if (game.graceTimer > 0) return;
   p.hp -= dmg; p.iframe = 0.6;
+  const lostCombo = game.combo;
   game.combo = Math.floor(game.combo * 0.4);
+  // flash the combo counter red when losing a big combo (loss aversion feedback)
+  if (lostCombo >= 5) game.comboLostFlash = 0.5;
   Sound.hurt();
   game.shake = Math.min(game.shake + 10, 18);
   burst(p.x, p.y, '#ff5d52', 10, 200);
   floatText(p.x, p.y - p.r - 4, '-' + dmg, '#ff5d52', false);
-  if (p.hp <= 0) { p.hp = 0; endGame(); }
+  if (p.hp <= 0) { p.hp = 0; triggerDeath(); }
 }

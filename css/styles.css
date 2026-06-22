@@ -135,7 +135,22 @@ canvas{display:block;width:100%;height:100%;}
 .ostat{display:flex;flex-direction:column;gap:4px;}
 .ostat .v{font-size:34px;font-weight:700;line-height:1;}
 .ostat .l{font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;}
+.orank{
+  font-size:clamp(48px,12vw,80px);font-weight:700;line-height:1;margin-top:8px;
+  letter-spacing:.04em;
+  text-shadow:0 0 30px rgba(154,123,255,.4);
+}
+.orank[data-rank="S"]{color:#ffce4f;text-shadow:0 0 30px rgba(255,206,79,.5);}
+.orank[data-rank="A"]{color:#5fe6c4;}
+.orank[data-rank="B"]{color:#7bd0ff;}
+.orank[data-rank="C"]{color:var(--muted);}
+.orank[data-rank="D"]{color:#8a8aa8;}
 #bestTag{margin-top:18px;color:var(--gold);font-weight:600;letter-spacing:.1em;font-size:14px;min-height:18px;}
+.nearmiss{
+  margin-top:8px;color:var(--coral);font-weight:600;letter-spacing:.08em;font-size:13px;
+  min-height:16px;animation:pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes pulse{from{opacity:.7;}to{opacity:1;}}
 
 /* level up */
 #levelup{z-index:6;background:radial-gradient(70% 70% at 50% 50%, rgba(20,18,40,.7), rgba(7,7,15,.94));}

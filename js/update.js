@@ -1,10 +1,14 @@
 /* ============================================================
    The per-frame simulation step.
 
-   Each sub-system (spawning, movement, bullets, enemies, etc.) is
-   its own function for readability and testability.
+   Design notes (research-backed):
+   - Spawn lulls between waves create tension-release cycles (flow)
+   - Grace period on game start prevents frustration deaths (onboarding)
+   - Dynamic difficulty: spawn rate scales down when HP is low (flow channel)
+   - XP near level-up boosts pickup attraction (goal gradient effect)
+   - Death state runs slow-mo for 1.2s before game over (peak-end rule)
    ============================================================ */
-import { game, comboMult } from './state.js';
+import { game } from './state.js';
 import { W, H } from './canvas.js';
 import { keys, touch } from './input.js';
 import { rand, randi, clamp, lerp, dist2, TAU, compactInPlace } from './utils.js';
@@ -13,10 +17,25 @@ import { fireWeapon, damageEnemy, hurtPlayer, collectGem } from './combat.js';
 import { burst, floatText } from './effects.js';
 import { Sound } from './audio.js';
 import { WAVES, MILESTONES } from './data.js';
+import { endGame } from './hud.js';
 
 export function update(dt) {
   game.time += dt;
   const p = game.player;
+
+  // death slow-mo: sim runs at 20% speed, then triggers game over
+  if (game.state === 'dying') {
+    game.deathTimer -= dt;
+    if (game.deathTimer <= 0) { endGame(); return; }
+    dt *= 0.2;
+    updateEphemera(dt);
+    updateEnemies(p, dt);
+    if (game.shake > 0) game.shake = Math.max(0, game.shake - dt * 30);
+    return;
+  }
+
+  if (game.graceTimer > 0) game.graceTimer -= dt;
+  if (game.comboLostFlash > 0) game.comboLostFlash -= dt;
 
   updateCombo(dt);
   updateFlash(dt);
@@ -47,8 +66,17 @@ function updateFlash(dt) {
 }
 
 function updateSpawning(dt) {
+  // wave lull: brief spawn pause during wave transitions (tension-release)
+  if (game.waveLull > 0) { game.waveLull -= dt; return; }
+
   const t = game.time;
-  const spawnInterval = Math.max(0.16, 1.1 - t * 0.012);
+  const p = game.player;
+
+  // dynamic difficulty: spawn slower when HP is critically low (flow channel)
+  const hpRatio = p.hp / p.maxHp;
+  const ddaFactor = hpRatio < 0.3 ? 1.6 : hpRatio < 0.5 ? 1.2 : 1.0;
+
+  const spawnInterval = Math.max(0.16, (1.1 - t * 0.012) * ddaFactor);
   game.spawnTimer -= dt;
   if (game.spawnTimer <= 0) {
     game.spawnTimer = spawnInterval;
@@ -68,6 +96,8 @@ function updateWaves() {
     game.shake = Math.min(game.shake + 6, 14);
     Sound.level();
     game.waveNum++;
+    // brief lull between waves: 1.5s of no spawns (tension-release cycle)
+    game.waveLull = 1.5;
   }
 }
 
@@ -100,7 +130,6 @@ function updatePlayerMovement(p, dt) {
     game.parts.push({ x: p.x, y: p.y, vx: 0, vy: 0, life: 0.2, max: 0.2, color: 'rgba(154,123,255,0.55)', size: 7 });
     p.x = clamp(p.x + p.dashVX * dt, p.r, W - p.r);
     p.y = clamp(p.y + p.dashVY * dt, p.r, H - p.r);
-    // dash deals damage to enemies you pass through
     for (const e of game.enemies) {
       if (e.dead || e.orbCd > 0) continue;
       const rr = e.r + p.r + 6;
@@ -166,34 +195,29 @@ function updateEnemies(p, dt) {
     const ang = Math.atan2(p.y - e.y, p.x - e.x);
     e.wob += dt * 3;
 
-    // movement varies by type
     if (e.type === 'rusher') {
-      // rushers zigzag
       const wob = Math.sin(e.wob) * 0.4;
       e.x += Math.cos(ang + wob) * e.speed * dt;
       e.y += Math.sin(ang + wob) * e.speed * dt;
     } else if (e.type === 'tank') {
-      // tanks lumber directly but occasionally lunge
       const lunge = (Math.sin(e.wob * 0.7) > 0.92) ? 2.4 : 1;
       e.x += Math.cos(ang) * e.speed * lunge * dt;
       e.y += Math.sin(ang) * e.speed * lunge * dt;
     } else if (e.type === 'splitter') {
-      // splitters orbit slightly before closing in
       const orbit = Math.sin(e.wob * 0.5) * 0.5;
       e.x += Math.cos(ang + orbit) * e.speed * dt;
       e.y += Math.sin(ang + orbit) * e.speed * dt;
     } else if (e.type === 'elite') {
-      // elites strafe in arcs
       const strafe = Math.sin(e.wob * 0.4) * 0.6;
       e.x += Math.cos(ang + strafe) * e.speed * dt;
       e.y += Math.sin(ang + strafe) * e.speed * dt;
     } else {
-      // grunts: direct approach
       e.x += Math.cos(ang) * e.speed * dt;
       e.y += Math.sin(ang) * e.speed * dt;
     }
 
-    // contact damage
+    // skip contact damage during death slow-mo and grace period
+    if (game.state === 'dying') return true;
     const rr = e.r + p.r;
     if (p.iframe <= 0 && dist2(e.x, e.y, p.x, p.y) < rr * rr) {
       hurtPlayer(e.dmg);
@@ -222,12 +246,17 @@ function updateOrbs(p, dt) {
 }
 
 function updatePickups(p, dt) {
+  // goal gradient: when XP > 75% of level, boost pickup attraction
+  const xpRatio = game.xpNeed > 0 ? game.xp / game.xpNeed : 0;
+  const rangeBoost = xpRatio > 0.75 ? 1.4 : 1.0;
+
   compactInPlace(game.gems, g => {
     g.life -= dt; g.bob += dt * 5;
     const d2 = dist2(g.x, g.y, p.x, p.y);
-    if (d2 < p.range * p.range) {
+    const effectiveRange = p.range * rangeBoost;
+    if (d2 < effectiveRange * effectiveRange) {
       const d = Math.sqrt(d2) || 1;
-      const pull = lerp(60, 560, 1 - clamp(d / p.range, 0, 1));
+      const pull = lerp(60, 560, 1 - clamp(d / effectiveRange, 0, 1));
       g.x += (p.x - g.x) / d * pull * dt;
       g.y += (p.y - g.y) / d * pull * dt;
     }

@@ -58,6 +58,21 @@ export function render() {
     grd.addColorStop(1, 'rgba(255,206,79,' + intensity + ')');
     ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
   }
+
+  // death desaturation overlay (peak-end rule: make death feel dramatic)
+  if (game.state === 'dying') {
+    const t = clamp(1 - game.deathTimer / 1.2, 0, 1);
+    ctx.fillStyle = 'rgba(12,13,26,' + (t * 0.6) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // grace period shield indicator (onboarding: show the player they are safe)
+  if (p && game.graceTimer > 0) {
+    const a = clamp(game.graceTimer / 1.5, 0, 1) * 0.3;
+    ctx.strokeStyle = 'rgba(95,230,196,' + a + ')';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 18, 0, TAU); ctx.stroke();
+  }
 }
 
 function drawGrid() {
