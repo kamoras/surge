@@ -22,6 +22,8 @@ const HINTS = [
     text: 'Press SHIFT to dash (invulnerable briefly)' },
   { id: 'surgetip',trigger: g => g.time > 15 && g.player && g.player.surge < 30,
     text: 'Surge charges faster near enemies -- risk = power' },
+  { id: 'drain',   trigger: g => g.combo === 0 && g.time > 5 && g.graceTimer <= 0,
+    text: 'No combo -- you are losing HP. Kill to survive' },
   { id: 'levelup', trigger: g => g.level === 2 && g.state === 'playing',
     text: 'Pick an upgrade -- each one shapes your build' },
   { id: 'elite',   trigger: g => g.enemies.some(e => e.isElite && e.type === 'elite'),

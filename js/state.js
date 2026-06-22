@@ -6,8 +6,8 @@
    so the reference stays stable across modules.
    ============================================================ */
 
-/** Seconds a combo survives without a kill before it decays. */
-export const COMBO_WINDOW = 3.0;
+/** HP drain per second when combo is at 0 (forces engagement). */
+export const ZERO_COMBO_DRAIN = 3.0;
 
 /* ---------- best-score persistence (localStorage) ---------- */
 const BEST_KEY = 'surge_best_v1';
@@ -47,7 +47,7 @@ export const game = {
   state: 'menu',           // menu | playing | levelup | paused | over | dying
   time: 0, kills: 0, score: 0,
   shake: 0, slow: 0, flash: 0, best: 0,
-  combo: 0, comboTimer: 0, maxCombo: 0,
+  combo: 0, maxCombo: 0,
   bestCombo: 0, bestTime: 0, gamesPlayed: 0,
   eliteTimer: 0, waveTimer: 0, waveNum: 0,
   waveLull: 0,

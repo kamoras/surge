@@ -5,7 +5,7 @@
    more damage, harder enemies. One hit resets combo to zero.
    Enemy count is capped for visual clarity. Each kill matters.
    ============================================================ */
-import { game } from './state.js';
+import { game, ZERO_COMBO_DRAIN } from './state.js';
 import { W, H, WORLD_W, WORLD_H, camX, camY, updateCamera } from './canvas.js';
 import { keys, touch } from './input.js';
 import { rand, randi, clamp, lerp, dist2, TAU, compactInPlace } from './utils.js';
@@ -55,9 +55,11 @@ export function update(dt) {
 }
 
 function updateCombo(dt) {
-  if (game.comboTimer > 0) {
-    game.comboTimer -= dt;
-    if (game.comboTimer <= 0) game.combo = 0;
+  // combo only resets on hit, never on time
+  // but at 0 combo, the player slowly bleeds HP (forces engagement)
+  if (game.combo === 0 && game.graceTimer <= 0 && game.player.hp > 0) {
+    game.player.hp -= ZERO_COMBO_DRAIN * dt;
+    if (game.player.hp <= 0) { game.player.hp = 0; hurtPlayer(0); }
   }
 }
 

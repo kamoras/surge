@@ -72,9 +72,9 @@ export function updateHUD() {
     dom.comboLine.textContent = game.combo + ' COMBO  x' + comboMult().toFixed(1);
     dom.comboLine.style.color = game.combo >= 20 ? '#ffce4f' : '';
   } else {
-    dom.comboLine.style.opacity = '0.4';
-    dom.comboLine.textContent = '0 COMBO';
-    dom.comboLine.style.color = '';
+    dom.comboLine.style.opacity = '0.6';
+    dom.comboLine.textContent = 'NO COMBO -- HP DRAINING';
+    dom.comboLine.style.color = '#ff5d52';
   }
 }
 
@@ -92,7 +92,7 @@ export function startGame() {
   resize();
   Object.assign(game, {
     state: 'playing', time: 0, kills: 0, score: 0, shake: 0, slow: 0, flash: 0,
-    combo: 0, comboTimer: 0, maxCombo: 0, comboLostFlash: 0,
+    combo: 0, maxCombo: 0, comboLostFlash: 0,
     eliteTimer: 42, waveTimer: 0, waveNum: 0, waveLull: 0, bossTimer: 48, bossCount: 0,
     lastMoveX: 1, lastMoveY: 0,
     enemies: [], bullets: [], gems: [], parts: [], floats: [],

@@ -6,7 +6,7 @@
    combo. This creates the central tension: stay aggressive to stay
    powerful, but one mistake costs everything.
    ============================================================ */
-import { game, comboMult, COMBO_WINDOW } from './state.js';
+import { game, comboMult } from './state.js';
 import { rand, clamp, TAU } from './utils.js';
 import { Sound } from './audio.js';
 import { burst, floatText } from './effects.js';
@@ -64,7 +64,7 @@ function killEnemy(e) {
   e.dead = true;
   const p = game.player;
   game.kills++;
-  game.combo++; game.comboTimer = COMBO_WINDOW;
+  game.combo++;
   if (game.combo > game.maxCombo) game.maxCombo = game.combo;
   game.score += Math.round(e.score * comboMult());
   if (p.lifesteal > 0) p.hp = Math.min(p.maxHp, p.hp + p.lifesteal);
@@ -158,7 +158,9 @@ export function collectGem(g) {
     return;
   }
   Sound.pickup();
-  game.xp += g.val;
+  // combo boosts XP gain so high combo = faster leveling
+  const xpMult = 1 + Math.min(game.combo, 60) * 0.02;
+  game.xp += Math.ceil(g.val * xpMult);
   game.score += Math.round(2 * comboMult());
   burst(g.x, g.y, '#5fe6c4', 5, 120);
   let leveled = false;
@@ -189,7 +191,6 @@ export function hurtPlayer(dmg) {
   const lostCombo = game.combo;
   if (lostCombo > 0) {
     game.combo = 0;
-    game.comboTimer = 0;
     game.comboLostFlash = 0.8;
     if (lostCombo >= 10) {
       floatText(p.x, p.y - 40, lostCombo + ' COMBO LOST', '#ff5d52', true);
