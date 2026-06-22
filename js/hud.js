@@ -19,6 +19,7 @@ import { burst } from './effects.js';
 import { makePlayer } from './entities.js';
 import { $, show, hide, fmtTime } from './dom.js';
 import { MILESTONES } from './data.js';
+import { resetTutorial } from './tutorial.js';
 
 let dom = null;
 function cacheDom() {
@@ -26,7 +27,7 @@ function cacheDom() {
     hpFill: $('hpFill'), hpLabel: $('hpLabel'),
     xpFill: $('xpFill'), xpLabel: $('xpLabel'),
     timer: $('timer'), kills: $('kills'), score: $('score'),
-    comboLine: $('comboLine'), muteBtn: $('muteBtn'), hud: $('hud'),
+    comboLine: $('comboLine'), muteBtn: $('muteBtn'), hud: $('hud'), dashBtn: $('dashBtn'),
     startBest: $('startBest'),
     oTime: $('oTime'), oScore: $('oScore'), oKills: $('oKills'),
     oLevel: $('oLevel'), oCombo: $('oCombo'), oWave: $('oWave'), oRank: $('oRank'),
@@ -49,6 +50,10 @@ export function updateHUD() {
   dom.timer.textContent = fmtTime(game.time);
   dom.kills.textContent = game.kills;
   dom.score.textContent = game.score;
+
+  // dash button cooldown visual (mobile)
+  if (p.dashTimer > 0) dom.dashBtn.classList.add('cd');
+  else dom.dashBtn.classList.remove('cd');
 
   if (game.combo >= 3) {
     dom.comboLine.style.opacity = '1';
@@ -86,12 +91,13 @@ export function startGame() {
     eliteTimer: 42, waveTimer: 0, waveNum: 0, waveLull: 0,
     lastMoveX: 1, lastMoveY: 0,
     enemies: [], bullets: [], gems: [], parts: [], floats: [],
-    spawnTimer: 0.3, fireTimer: 0, level: 1, xp: 0, xpNeed: 6, pendingLevels: 0,
+    spawnTimer: 0.3, fireTimer: 0, level: 1, xp: 0, xpNeed: 4, pendingLevels: 0,
     nextMilestone: 0, deathTimer: 0,
     graceTimer: 1.5,
   });
   game.player = makePlayer();
   game.player.iframe = 1.5;
+  resetTutorial();
   hide('start'); hide('over'); hide('pause'); hide('levelup');
   dom.hud.classList.add('on');
   dom.comboLine.style.opacity = '0';

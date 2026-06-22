@@ -41,7 +41,9 @@ export function spawnEnemy() {
   const weights = [['grunt', 10]];
   if (t > 12) weights.push(['rusher', 4 + t * 0.08]);
   if (t > 30) weights.push(['tank', 2 + t * 0.04]);
+  if (t > 40) weights.push(['shielder', 1.5 + t * 0.03]);
   if (t > 50) weights.push(['splitter', 2 + t * 0.05]);
+  if (t > 65) weights.push(['warper', 1 + t * 0.025]);
   let total = weights.reduce((s, w) => s + w[1], 0), roll = Math.random() * total, type = 'grunt';
   for (const [name, wt] of weights) { if ((roll -= wt) <= 0) { type = name; break; } }
   addEnemy(type, edgePoint());
@@ -56,6 +58,11 @@ export function addEnemy(type, pos) {
     speed: base.speed * (1 + t / 180), dmg: base.dmg,
     color: base.color, xp: base.xp, score: base.score,
     flash: 0, wob: rand(0, TAU), orbCd: 0,
+    // warper blink state: visible for 0.6s, then teleport, repeat
+    warpTimer: type === 'warper' ? rand(0.3, 0.6) : 0,
+    warpVisible: true,
+    // shielder: shield faces toward player, blocks frontal bullets
+    shieldAngle: 0,
   });
 }
 

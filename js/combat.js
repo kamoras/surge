@@ -37,6 +37,17 @@ export function fireWeapon(p) {
 
 export function damageEnemy(e, dmg, x, y, canCrit) {
   const p = game.player;
+  // shielder deflection: bullets hitting the front 120-degree arc deal no damage
+  if (e.type === 'shielder') {
+    const hitAngle = Math.atan2(y - e.y, x - e.x);
+    let diff = hitAngle - e.shieldAngle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    if (Math.abs(diff) < Math.PI / 3) {
+      burst(x, y, '#4fc3f7', 3, 100);
+      return;
+    }
+  }
   let isCrit = false;
   if (canCrit && p.crit > 0 && Math.random() < p.crit) { dmg *= p.critMult; isCrit = true; }
   e.hp -= dmg; e.flash = 0.09;
@@ -125,7 +136,7 @@ export function collectGem(g) {
   while (game.xp >= game.xpNeed) {
     game.xp -= game.xpNeed;
     game.level++;
-    game.xpNeed = Math.round(6 + game.level * 4.2 + game.level * game.level * 0.5);
+    game.xpNeed = Math.round(4 + game.level * 3.5 + game.level * game.level * 0.35);
     game.pendingLevels = (game.pendingLevels || 0) + 1;
     leveled = true;
   }
@@ -150,6 +161,7 @@ export function hurtPlayer(dmg) {
   // flash the combo counter red when losing a big combo (loss aversion feedback)
   if (lostCombo >= 5) game.comboLostFlash = 0.5;
   Sound.hurt();
+  if (navigator.vibrate) navigator.vibrate(p.hp <= 0 ? [100, 50, 200] : 40);
   game.shake = Math.min(game.shake + 10, 18);
   burst(p.x, p.y, '#ff5d52', 10, 200);
   floatText(p.x, p.y - p.r - 4, '-' + dmg, '#ff5d52', false);

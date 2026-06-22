@@ -213,6 +213,33 @@ function updateEnemies(p, dt) {
       const orbit = Math.sin(e.wob * 0.5) * 0.5;
       e.x += Math.cos(ang + orbit) * e.speed * dt;
       e.y += Math.sin(ang + orbit) * e.speed * dt;
+    } else if (e.type === 'shielder') {
+      // shield faces the player; moves directly but slightly slower
+      e.shieldAngle = ang + Math.PI;
+      e.x += Math.cos(ang) * e.speed * dt;
+      e.y += Math.sin(ang) * e.speed * dt;
+    } else if (e.type === 'warper') {
+      // blinks: visible briefly, then teleports closer
+      e.warpTimer -= dt;
+      if (e.warpTimer <= 0) {
+        if (e.warpVisible) {
+          // teleport toward player
+          const warpDist = rand(60, 120);
+          e.x += Math.cos(ang) * warpDist;
+          e.y += Math.sin(ang) * warpDist;
+          e.warpVisible = false;
+          e.warpTimer = 0.2;
+          burst(e.x, e.y, e.color, 6, 180);
+        } else {
+          e.warpVisible = true;
+          e.warpTimer = rand(0.5, 0.8);
+        }
+      }
+      // drift slowly even while visible
+      if (e.warpVisible) {
+        e.x += Math.cos(ang) * e.speed * 0.4 * dt;
+        e.y += Math.sin(ang) * e.speed * 0.4 * dt;
+      }
     } else if (e.type === 'elite') {
       const strafe = Math.sin(e.wob * 0.4) * 0.6;
       e.x += Math.cos(ang + strafe) * e.speed * dt;

@@ -14,7 +14,6 @@ const BEST_KEY = 'surge_best_v1';
 const BEST_COMBO_KEY = 'surge_best_combo_v1';
 const BEST_TIME_KEY = 'surge_best_time_v1';
 const GAMES_KEY = 'surge_games_v1';
-
 export function loadBest() {
   try { return parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; }
   catch (e) { return 0; }
@@ -73,9 +72,9 @@ export function comboMult() { return 1 + Math.min(game.combo, 120) * 0.04; }
  * gives players a concrete goal to aim for on their next run.
  */
 export function scoreRank(score) {
-  if (score >= 5000) return 'S';
-  if (score >= 3000) return 'A';
-  if (score >= 1500) return 'B';
-  if (score >= 600)  return 'C';
+  if (score >= 4000) return 'S';
+  if (score >= 2200) return 'A';
+  if (score >= 1000) return 'B';
+  if (score >= 400)  return 'C';
   return 'D';
 }

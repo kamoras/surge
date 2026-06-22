@@ -10,8 +10,23 @@
 import { game, comboMult } from './state.js';
 import { ctx, W, H } from './canvas.js';
 import { rand, clamp, TAU } from './utils.js';
+import { touch } from './input.js';
 
 let gridOff = 0;
+let stars = null;
+
+function initStars() {
+  stars = [];
+  for (let i = 0; i < 60; i++) {
+    stars.push({
+      x: Math.random() * 2000,
+      y: Math.random() * 2000,
+      size: 0.5 + Math.random() * 1.5,
+      speed: 0.08 + Math.random() * 0.15,
+      alpha: 0.15 + Math.random() * 0.25,
+    });
+  }
+}
 
 export function render() {
   ctx.clearRect(0, 0, W, H);
@@ -22,6 +37,7 @@ export function render() {
   ctx.save();
   ctx.translate(sx, sy);
 
+  drawStars();
   drawGrid();
 
   const p = game.player;
@@ -33,6 +49,7 @@ export function render() {
   if (p) { drawPlayer(p); drawOrbs(p); }
   drawFloaters();
   if (p) drawDangerIndicators(p);
+  drawTouchJoystick();
 
   ctx.restore();
 
@@ -258,6 +275,28 @@ function drawEnemy(e) {
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(12,13,26,0.5)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5, 0, TAU); ctx.stroke();
+  } else if (e.type === 'shielder') {
+    // circle body with a front-facing shield arc
+    ctx.beginPath(); ctx.arc(0, 0, e.r * 0.75, 0, TAU); ctx.fill();
+    // shield arc: 120 degrees facing the player
+    const sa = e.shieldAngle - Math.atan2(e.y, e.x); // relative angle
+    ctx.strokeStyle = e.flash > 0 ? '#fff' : '#80d8ff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, e.r, e.shieldAngle - Math.PI / 3, e.shieldAngle + Math.PI / 3);
+    ctx.stroke();
+  } else if (e.type === 'warper') {
+    // flickering diamond that fades when about to teleport
+    if (!e.warpVisible) { ctx.globalAlpha *= 0.2; }
+    ctx.rotate(e.wob);
+    const wr = e.r;
+    ctx.beginPath();
+    ctx.moveTo(0, -wr); ctx.lineTo(wr * 0.7, 0); ctx.lineTo(0, wr); ctx.lineTo(-wr * 0.7, 0); ctx.closePath();
+    ctx.fill();
+    // inner cross
+    ctx.strokeStyle = 'rgba(12,13,26,0.4)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -wr * 0.5); ctx.lineTo(0, wr * 0.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-wr * 0.35, 0); ctx.lineTo(wr * 0.35, 0); ctx.stroke();
   } else if (e.type === 'elite') {
     ctx.rotate(e.wob * 0.3);
     ctx.lineWidth = 3;
@@ -288,6 +327,19 @@ function drawEnemy(e) {
   }
 }
 
+function drawStars() {
+  if (!stars) initStars();
+  ctx.fillStyle = '#f3ead7';
+  for (const s of stars) {
+    s.y = (s.y + s.speed) % (H + 20);
+    ctx.globalAlpha = s.alpha;
+    ctx.beginPath();
+    ctx.arc(s.x % (W + 10), s.y, s.size, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 /** Small arrows at screen edges pointing toward off-screen enemies. */
 function drawDangerIndicators(p) {
   const margin = 18;
@@ -313,5 +365,16 @@ function drawDangerIndicators(p) {
     ctx.fill();
     ctx.restore();
   }
+  ctx.globalAlpha = 1;
+}
+
+function drawTouchJoystick() {
+  if (!touch.active) return;
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = '#f3ead7'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(touch.ox, touch.oy, 40, 0, TAU); ctx.stroke();
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#f3ead7';
+  ctx.beginPath(); ctx.arc(touch.x, touch.y, 12, 0, TAU); ctx.fill();
   ctx.globalAlpha = 1;
 }

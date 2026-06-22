@@ -1,8 +1,6 @@
 /* ============================================================
-   Static game data: enemy archetypes and upgrade definitions.
-
-   These are pure data tables -- tweak balance here. Upgrade `apply`
-   functions receive the player object and mutate it in place.
+   Static game data: enemy archetypes, upgrades, waves, milestones,
+   and the meta-progression unlock table.
    ============================================================ */
 
 export const ETYPES = {
@@ -10,6 +8,8 @@ export const ETYPES = {
   rusher:   { r: 9,  hp: 8,  speed: 135, dmg: 6,  color: '#ff9d3d', xp: 1, score: 14 },
   tank:     { r: 22, hp: 60, speed: 38,  dmg: 16, color: '#c33b4f', xp: 3, score: 30 },
   splitter: { r: 15, hp: 22, speed: 70,  dmg: 9,  color: '#c77bff', xp: 2, score: 20 },
+  shielder: { r: 16, hp: 32, speed: 52,  dmg: 10, color: '#4fc3f7', xp: 2, score: 24 },
+  warper:   { r: 10, hp: 16, speed: 48,  dmg: 12, color: '#ab47bc', xp: 2, score: 28 },
 };
 
 export const UPGRADES = [
@@ -45,10 +45,8 @@ export const UPGRADES = [
     apply: p => p.furyScale += 0.06 },
 ];
 
-/** Kill milestones that trigger announcements and bonus XP. */
 export const MILESTONES = [25, 50, 100, 200, 350, 500, 750, 1000];
 
-/** Wave definitions: each entry is [startTime, label]. */
 export const WAVES = [
   [0,   'FIRST BLOOD'],
   [30,  'THE SWARM BUILDS'],
@@ -59,3 +57,4 @@ export const WAVES = [
   [280, 'HELL WAVE'],
   [360, 'ENDURANCE'],
 ];
+

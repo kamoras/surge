@@ -14,6 +14,7 @@ import { render } from './render.js';
 import {
   updateHUD, startGame, togglePause, toggleMute, shareRun, initStartScreen,
 } from './hud.js';
+import { updateTutorial } from './tutorial.js';
 import { $ } from './dom.js';
 
 $('startBtn').onclick = startGame;
@@ -21,6 +22,8 @@ $('againBtn').onclick = startGame;
 $('resumeBtn').onclick = togglePause;
 $('muteBtn').onclick = toggleMute;
 $('shareBtn').onclick = shareRun;
+const dashBtnEl = $('dashBtn');
+dashBtnEl.addEventListener('touchstart', e => { e.preventDefault(); tryDash(); }, { passive: false });
 initStartScreen();
 
 initInput({ onDash: tryDash, onPause: togglePause, onMute: toggleMute });
@@ -33,7 +36,7 @@ function loop(now) {
     let scaled = dt;
     if (game.slow > 0 && game.state === 'playing') { game.slow -= dt; scaled = dt * 0.35; }
     update(scaled);
-    if (game.state !== 'over') updateHUD();
+    if (game.state !== 'over') { updateHUD(); updateTutorial(scaled); }
   }
   render();
   requestAnimationFrame(loop);
