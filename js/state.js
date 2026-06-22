@@ -7,7 +7,7 @@
    ============================================================ */
 
 /** Seconds a combo survives without a kill before it resets. */
-export const COMBO_WINDOW = 2.6;
+export const COMBO_WINDOW = 1.8;
 
 /* ---------- best-score persistence (localStorage) ---------- */
 const BEST_KEY = 'surge_best_v1';
@@ -23,11 +23,13 @@ export const game = {
   state: 'menu',           // menu | playing | levelup | paused | over
   time: 0, kills: 0, score: 0,
   shake: 0, slow: 0, flash: 0, best: 0,
-  combo: 0, comboTimer: 0,
-  eliteTimer: 0, lastMoveX: 1, lastMoveY: 0,
+  combo: 0, comboTimer: 0, maxCombo: 0,
+  eliteTimer: 0, waveTimer: 0, waveNum: 0,
+  lastMoveX: 1, lastMoveY: 0,
   player: null, enemies: [], bullets: [], gems: [], parts: [], floats: [],
   spawnTimer: 0, fireTimer: 0, level: 1, xp: 0, xpNeed: 6, pendingLevels: 0,
-  lastT: 0,                // timestamp for the main loop's delta
+  lastT: 0,
+  nextMilestone: 0,
 };
 game.best = loadBest();
 

@@ -21,6 +21,7 @@ export function makePlayer() {
     crit: 0, critMult: 2.1, lifesteal: 0,
     orbCount: 0, orbAngle: 0,
     dashCd: 2.2, dashTimer: 0, dashing: 0, dashVX: 0, dashVY: 0,
+    furyScale: 0,
   };
 }
 
@@ -38,9 +39,9 @@ export function edgePoint() {
 export function spawnEnemy() {
   const t = game.time;
   const weights = [['grunt', 10]];
-  if (t > 15) weights.push(['rusher', 4 + t * 0.08]);
-  if (t > 35) weights.push(['tank', 2 + t * 0.04]);
-  if (t > 55) weights.push(['splitter', 2 + t * 0.05]);
+  if (t > 12) weights.push(['rusher', 4 + t * 0.08]);
+  if (t > 30) weights.push(['tank', 2 + t * 0.04]);
+  if (t > 50) weights.push(['splitter', 2 + t * 0.05]);
   let total = weights.reduce((s, w) => s + w[1], 0), roll = Math.random() * total, type = 'grunt';
   for (const [name, wt] of weights) { if ((roll -= wt) <= 0) { type = name; break; } }
   addEnemy(type, edgePoint());
@@ -68,7 +69,7 @@ export function spawnElite() {
     color: '#ff7ad0', xp: 16, score: 220,
     flash: 0, wob: rand(0, TAU), orbCd: 0, isElite: true,
   });
-  floatText(W / 2, 70, '⚠  ELITE INCOMING', '#ff7ad0', true);
+  floatText(W / 2, 70, 'ELITE INCOMING', '#ff7ad0', true);
   game.shake = Math.min(game.shake + 10, 16);
   Sound.elite();
 }

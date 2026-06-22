@@ -1,7 +1,7 @@
 /* ============================================================
    Static game data: enemy archetypes and upgrade definitions.
 
-   These are pure data tables — tweak balance here. Upgrade `apply`
+   These are pure data tables -- tweak balance here. Upgrade `apply`
    functions receive the player object and mutate it in place.
    ============================================================ */
 
@@ -33,12 +33,29 @@ export const UPGRADES = [
     apply: p => { p.projSize *= 1.4; p.dmg *= 1.1; } },
   { id: 'velo',  ic: '»', nm: 'Hypervelocity',   ds: '+30% projectile speed',           tier: 'common', acc: '#ffce4f',
     apply: p => p.projSpeed *= 1.3 },
-  { id: 'crit',  ic: '✦', nm: 'Targeting Matrix',ds: '+12% critical chance (×2.1 dmg)', tier: 'rare',   acc: '#ffce4f',
+  { id: 'crit',  ic: '✦', nm: 'Targeting Matrix',ds: '+12% critical chance (x2.1 dmg)', tier: 'rare',   acc: '#ffce4f',
     apply: p => p.crit = Math.min(p.crit + 0.12, 0.85) },
   { id: 'orb',   ic: '◌', nm: 'Aegis Shards',    ds: '+1 orbiting shard that shreds on contact', tier: 'rare', acc: '#7bd0ff',
     apply: p => p.orbCount++ },
   { id: 'leech', ic: '♥', nm: 'Leech Field',     ds: 'heal +0.6 HP per kill',           tier: 'rare',   acc: '#5fe6c4',
     apply: p => p.lifesteal += 0.6 },
-  { id: 'dash',  ic: '↯', nm: 'Phase Drive',     ds: '−30% dash cooldown',              tier: 'common', acc: '#9a7bff',
+  { id: 'dash',  ic: '↯', nm: 'Phase Drive',     ds: '-30% dash cooldown',              tier: 'common', acc: '#9a7bff',
     apply: p => p.dashCd *= 0.7 },
+  { id: 'fury',  ic: '⚡', nm: 'Fury Engine',     ds: '+6% damage per active combo hit (caps at +72%)', tier: 'rare', acc: '#ff7ad0',
+    apply: p => p.furyScale += 0.06 },
+];
+
+/** Kill milestones that trigger announcements and bonus XP. */
+export const MILESTONES = [25, 50, 100, 200, 350, 500, 750, 1000];
+
+/** Wave definitions: each entry is [startTime, label, extraSpawns]. */
+export const WAVES = [
+  [0,   'WAVE 1',  0],
+  [30,  'WAVE 2',  1],
+  [60,  'WAVE 3',  2],
+  [100, 'WAVE 4',  3],
+  [150, 'WAVE 5',  4],
+  [210, 'WAVE 6',  6],
+  [280, 'WAVE 7',  8],
+  [360, 'WAVE 8',  10],
 ];

@@ -1,5 +1,5 @@
 /* ============================================================
-   Math + small helpers. No dependencies — safe to import anywhere.
+   Math + small helpers. No dependencies -- safe to import anywhere.
    ============================================================ */
 export const TAU = Math.PI * 2;
 
@@ -15,3 +15,22 @@ export const dist2 = (ax, ay, bx, by) => {
 };
 
 export function pick(arr) { return arr[randi(0, arr.length - 1)]; }
+
+/**
+ * Remove items from an array by swapping each removed item with the last
+ * element and popping. O(1) per removal vs O(n) for splice. Order is not
+ * preserved, which is fine for particles, bullets, and floaters.
+ *
+ * `predicate(item, index)` should return true to KEEP the item.
+ */
+export function compactInPlace(arr, predicate) {
+  let i = 0;
+  while (i < arr.length) {
+    if (predicate(arr[i], i)) {
+      i++;
+    } else {
+      arr[i] = arr[arr.length - 1];
+      arr.pop();
+    }
+  }
+}

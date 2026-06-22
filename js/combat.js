@@ -1,11 +1,11 @@
 /* ============================================================
    Combat resolution + pickups.
 
-   Firing, damage (with crits), enemy death + rewards, the bomb
+   Firing, damage (with crits + fury), enemy death + rewards, bomb
    detonation, gem/heart/bomb collection, and the level-up trigger.
    ============================================================ */
 import { game, comboMult, COMBO_WINDOW } from './state.js';
-import { rand, TAU } from './utils.js';
+import { rand, clamp, TAU } from './utils.js';
 import { Sound } from './audio.js';
 import { burst, floatText } from './effects.js';
 import { addEnemy } from './entities.js';
@@ -15,13 +15,18 @@ import { endGame } from './hud.js';
 export function fireWeapon(p) {
   const n = p.projCount;
   const base = p.aim;
+  // fury bonus: combo scales damage when the upgrade is taken
+  const fury = p.furyScale > 0
+    ? 1 + clamp(game.combo * p.furyScale, 0, 0.72)
+    : 1;
+  const dmg = p.dmg * fury;
   for (let i = 0; i < n; i++) {
     const off = n === 1 ? 0 : (i - (n - 1) / 2) * p.spread;
     const a = base + off;
     game.bullets.push({
       x: p.x + Math.cos(a) * p.r, y: p.y + Math.sin(a) * p.r,
       vx: Math.cos(a) * p.projSpeed, vy: Math.sin(a) * p.projSpeed,
-      r: p.projSize, dmg: p.dmg, life: 1.6, pierce: p.pierce, hits: null,
+      r: p.projSize, dmg, life: 1.6, pierce: p.pierce, hits: null,
     });
   }
   p.muzzle = 0.06;
@@ -44,8 +49,8 @@ function killEnemy(e) {
   e.dead = true;
   const p = game.player;
   game.kills++;
-  // combo: each kill bumps the multiplier and refreshes the decay timer
   game.combo++; game.comboTimer = COMBO_WINDOW;
+  if (game.combo > game.maxCombo) game.maxCombo = game.combo;
   game.score += Math.round(e.score * comboMult());
   if (p.lifesteal > 0) p.hp = Math.min(p.maxHp, p.hp + p.lifesteal);
   Sound.kill();
@@ -53,7 +58,6 @@ function killEnemy(e) {
   burst(e.x, e.y, e.color, e.isElite ? 40 : (e.type === 'tank' ? 22 : 12), e.isElite ? 360 : 240);
 
   if (e.isElite) {
-    // elite reward: XP shower + guaranteed heart + chance of a bomb
     for (let i = 0; i < 6; i++) game.gems.push({ kind: 'xp', x: e.x + rand(-22, 22), y: e.y + rand(-22, 22), val: 3, life: 12, bob: rand(0, TAU) });
     game.gems.push({ kind: 'heart', x: e.x - 12, y: e.y, val: 0, life: 14, bob: 0 });
     if (Math.random() < 0.6) game.gems.push({ kind: 'bomb', x: e.x + 12, y: e.y, val: 0, life: 14, bob: 0 });
@@ -93,7 +97,6 @@ export function collectGem(g) {
     detonateBomb(g.x, g.y);
     return;
   }
-  // xp shard
   Sound.pickup();
   game.xp += g.val;
   game.score += Math.round(2 * comboMult());
@@ -111,18 +114,17 @@ export function collectGem(g) {
 
 function onLevelUp() {
   Sound.level();
-  game.slow = 0.55;       // brief slow-mo windup (applied in the main loop)
+  game.slow = 0.55;
   burst(game.player.x, game.player.y, '#ffce4f', 26, 300);
   floatText(game.player.x, game.player.y - 26, 'LEVEL ' + game.level, '#ffce4f', true);
   game.shake = 12;
-  // open the upgrade screen after a short beat
   setTimeout(() => { if (game.state === 'playing') offerUpgrades(); }, 260);
 }
 
 export function hurtPlayer(dmg) {
   const p = game.player;
   p.hp -= dmg; p.iframe = 0.6;
-  game.combo = Math.floor(game.combo * 0.4);   // taking a hit costs most of your combo
+  game.combo = Math.floor(game.combo * 0.4);
   Sound.hurt();
   game.shake = Math.min(game.shake + 10, 18);
   burst(p.x, p.y, '#ff5d52', 10, 200);

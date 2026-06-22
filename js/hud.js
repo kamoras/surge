@@ -10,44 +10,62 @@ import { burst } from './effects.js';
 import { makePlayer } from './entities.js';
 import { $, show, hide, fmtTime } from './dom.js';
 
+/* ---------- cached DOM refs (avoids getElementById every frame) ---------- */
+let dom = null;
+function cacheDom() {
+  dom = {
+    hpFill: $('hpFill'), hpLabel: $('hpLabel'),
+    xpFill: $('xpFill'), xpLabel: $('xpLabel'),
+    timer: $('timer'), kills: $('kills'), score: $('score'),
+    comboLine: $('comboLine'), muteBtn: $('muteBtn'), hud: $('hud'),
+    startBest: $('startBest'),
+    oTime: $('oTime'), oScore: $('oScore'), oKills: $('oKills'),
+    oLevel: $('oLevel'), oCombo: $('oCombo'),
+    bestTag: $('bestTag'), shareBtn: $('shareBtn'),
+  };
+}
+
 /* ---------- per-frame HUD ---------- */
 export function updateHUD() {
-  const p = game.player; if (!p) return;
-  $('hpFill').style.width = Math.max(0, Math.min(p.hp / p.maxHp * 100, 100)) + '%';
-  $('hpLabel').textContent = Math.ceil(p.hp) + ' / ' + p.maxHp;
-  $('xpFill').style.width = Math.max(0, Math.min(game.xp / game.xpNeed * 100, 100)) + '%';
-  $('xpLabel').textContent = 'LV ' + game.level;
-  $('timer').textContent = fmtTime(game.time);
-  $('kills').textContent = game.kills;
-  $('score').textContent = game.score;
+  const p = game.player; if (!p || !dom) return;
+  dom.hpFill.style.width = Math.max(0, Math.min(p.hp / p.maxHp * 100, 100)) + '%';
+  dom.hpLabel.textContent = Math.ceil(p.hp) + ' / ' + p.maxHp;
+  dom.xpFill.style.width = Math.max(0, Math.min(game.xp / game.xpNeed * 100, 100)) + '%';
+  dom.xpLabel.textContent = 'LV ' + game.level;
+  dom.timer.textContent = fmtTime(game.time);
+  dom.kills.textContent = game.kills;
+  dom.score.textContent = game.score;
 
-  const cl = $('comboLine');
   if (game.combo >= 3) {
-    cl.style.opacity = '1';
-    cl.textContent = '×' + comboMult().toFixed(1) + '  ·  ' + game.combo + ' COMBO';
+    dom.comboLine.style.opacity = '1';
+    dom.comboLine.textContent = 'x' + comboMult().toFixed(1) + '  ·  ' + game.combo + ' COMBO';
   } else {
-    cl.style.opacity = '0';
+    dom.comboLine.style.opacity = '0';
   }
 }
 
 function refreshStartBest() {
-  $('startBest').textContent = game.best > 0 ? ('BEST SCORE  ' + game.best) : '';
+  dom.startBest.textContent = game.best > 0 ? ('BEST SCORE  ' + game.best) : '';
 }
 
 /* ---------- run lifecycle ---------- */
 export function startGame() {
+  if (!dom) cacheDom();
   Sound.init();
   resize();
   Object.assign(game, {
     state: 'playing', time: 0, kills: 0, score: 0, shake: 0, slow: 0, flash: 0,
-    combo: 0, comboTimer: 0, eliteTimer: 42, lastMoveX: 1, lastMoveY: 0,
+    combo: 0, comboTimer: 0, maxCombo: 0,
+    eliteTimer: 42, waveTimer: 0, waveNum: 0,
+    lastMoveX: 1, lastMoveY: 0,
     enemies: [], bullets: [], gems: [], parts: [], floats: [],
     spawnTimer: 0.5, fireTimer: 0, level: 1, xp: 0, xpNeed: 6, pendingLevels: 0,
+    nextMilestone: 0,
   });
   game.player = makePlayer();
   hide('start'); hide('over'); hide('pause'); hide('levelup');
-  $('hud').classList.add('on');
-  $('comboLine').style.opacity = '0';
+  dom.hud.classList.add('on');
+  dom.comboLine.style.opacity = '0';
   game.lastT = performance.now();
 }
 
@@ -56,18 +74,18 @@ export function endGame() {
   Sound.over();
   burst(game.player.x, game.player.y, '#ff5d52', 40, 360);
   game.shake = 20;
-  $('hud').classList.remove('on');
-  $('oTime').textContent = fmtTime(game.time);
-  $('oScore').textContent = game.score;
-  $('oKills').textContent = game.kills;
-  $('oLevel').textContent = game.level;
+  dom.hud.classList.remove('on');
+  dom.oTime.textContent = fmtTime(game.time);
+  dom.oScore.textContent = game.score;
+  dom.oKills.textContent = game.kills;
+  dom.oLevel.textContent = game.level;
+  dom.oCombo.textContent = game.maxCombo;
 
-  const bt = $('bestTag');
   if (game.score > game.best) {
     game.best = game.score; saveBest(game.best);
-    bt.textContent = '★ NEW BEST SCORE ★';
+    dom.bestTag.textContent = 'NEW BEST SCORE';
   } else {
-    bt.textContent = 'Best  ' + game.best;
+    dom.bestTag.textContent = 'Best  ' + game.best;
   }
   refreshStartBest();
   setTimeout(() => show('over'), 700);
@@ -80,24 +98,31 @@ export function togglePause() {
 
 export function toggleMute() {
   Sound.setMuted(!Sound.isMuted());
-  const btn = $('muteBtn');
-  btn.textContent = Sound.isMuted() ? '✕' : '♪';
-  btn.style.color = Sound.isMuted() ? '#ff5d52' : '';
+  dom.muteBtn.textContent = Sound.isMuted() ? '✕' : '♪';
+  dom.muteBtn.style.color = Sound.isMuted() ? '#ff5d52' : '';
 }
 
 export function shareRun() {
-  const txt = 'I survived ' + fmtTime(game.time) + ' in SURGE with a score of ' + game.score + '. Can you beat it?';
-  const url = location.href.split('#')[0];
+  const txt = 'I survived ' + fmtTime(game.time) + ' in SURGE with a score of '
+    + game.score + ' and a ' + game.maxCombo + '-kill combo. Can you beat it?';
+  const url = 'https://surge.paramain.com';
   if (navigator.share) {
     navigator.share({ title: 'SURGE', text: txt, url }).catch(() => {});
   } else if (navigator.clipboard) {
     navigator.clipboard.writeText(txt + ' ' + url).then(() => {
-      const b = $('shareBtn'); const old = b.textContent;
-      b.textContent = 'Copied!';
-      setTimeout(() => { b.textContent = old; }, 1400);
+      const old = dom.shareBtn.textContent;
+      dom.shareBtn.textContent = 'Copied!';
+      setTimeout(() => { dom.shareBtn.textContent = old; }, 1400);
     }).catch(() => {});
   }
 }
 
-/** Show the all-time best on the start screen at boot. */
-export function initStartScreen() { refreshStartBest(); }
+export function initStartScreen() {
+  cacheDom();
+  refreshStartBest();
+}
+
+// auto-pause when the tab loses focus so players don't die in the background
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && game.state === 'playing') togglePause();
+});

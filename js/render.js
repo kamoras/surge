@@ -1,8 +1,13 @@
 /* ============================================================
-   All canvas drawing. Reads game state; never mutates it (except
-   the purely cosmetic scrolling-grid offset).
+   All canvas drawing. Reads game state; never mutates it.
+
+   Performance notes:
+   - shadowBlur is GPU-heavy; we only use it sparingly (player, pickups)
+     and skip it on enemies/bullets (draw a second, larger, semi-transparent
+     circle as a cheap glow instead).
+   - Particles and floaters are drawn with no shadow at all.
    ============================================================ */
-import { game } from './state.js';
+import { game, comboMult } from './state.js';
 import { ctx, W, H } from './canvas.js';
 import { rand, clamp, TAU } from './utils.js';
 
@@ -17,68 +22,16 @@ export function render() {
   ctx.save();
   ctx.translate(sx, sy);
 
-  // scrolling grid
-  gridOff = (gridOff + 0.15) % 48;
-  ctx.strokeStyle = 'rgba(154,123,255,0.06)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = -48 + gridOff; x < W + 48; x += 48) { ctx.moveTo(x, -48); ctx.lineTo(x, H + 48); }
-  for (let y = -48 + gridOff; y < H + 48; y += 48) { ctx.moveTo(-48, y); ctx.lineTo(W + 48, y); }
-  ctx.stroke();
+  drawGrid();
 
   const p = game.player;
 
-  // gems / pickups
-  for (const g of game.gems) {
-    if (g.kind === 'heart') { drawHeart(g); continue; }
-    if (g.kind === 'bomb') { drawBomb(g); continue; }
-    const pulse = 0.7 + Math.sin(g.bob) * 0.3;
-    ctx.save();
-    ctx.translate(g.x, g.y);
-    ctx.rotate(g.bob * 0.4);
-    ctx.shadowColor = '#5fe6c4'; ctx.shadowBlur = 10;
-    ctx.fillStyle = '#5fe6c4';
-    ctx.globalAlpha = g.life < 2 ? g.life / 2 : 1;
-    const s = 3.4 * pulse;
-    ctx.beginPath();
-    ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0); ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-  ctx.globalAlpha = 1;
-
-  // bullets
-  ctx.shadowBlur = 8;
-  for (const b of game.bullets) {
-    ctx.shadowColor = '#ffce4f';
-    ctx.fillStyle = '#ffe9a8';
-    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
-  }
-  ctx.shadowBlur = 0;
-
-  // enemies
-  for (const e of game.enemies) drawEnemy(e);
-
-  // particles
-  for (const pa of game.parts) {
-    ctx.globalAlpha = clamp(pa.life / pa.max, 0, 1);
-    ctx.fillStyle = pa.color;
-    ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.size, 0, TAU); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-
-  // player + orbiting shards
+  drawPickups();
+  drawBullets();
+  drawEnemies();
+  drawParticles();
   if (p) { drawPlayer(p); drawOrbs(p); }
-
-  // floating text
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (const f of game.floats) {
-    ctx.globalAlpha = clamp(f.life / 0.8, 0, 1);
-    ctx.font = '700 ' + f.size + 'px Chakra Petch, sans-serif';
-    ctx.fillStyle = f.color;
-    ctx.fillText(f.txt, f.x, f.y);
-  }
-  ctx.globalAlpha = 1;
+  drawFloaters();
 
   ctx.restore();
 
@@ -96,6 +49,80 @@ export function render() {
     grd.addColorStop(1, 'rgba(255,93,82,' + a + ')');
     ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
   }
+
+  // combo intensity border when combo is high
+  if (game.combo >= 8) {
+    const intensity = clamp((game.combo - 8) / 40, 0, 0.5);
+    const grd = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.65);
+    grd.addColorStop(0, 'rgba(255,206,79,0)');
+    grd.addColorStop(1, 'rgba(255,206,79,' + intensity + ')');
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawGrid() {
+  gridOff = (gridOff + 0.15) % 48;
+  ctx.strokeStyle = 'rgba(154,123,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = -48 + gridOff; x < W + 48; x += 48) { ctx.moveTo(x, -48); ctx.lineTo(x, H + 48); }
+  for (let y = -48 + gridOff; y < H + 48; y += 48) { ctx.moveTo(-48, y); ctx.lineTo(W + 48, y); }
+  ctx.stroke();
+}
+
+function drawPickups() {
+  for (const g of game.gems) {
+    if (g.kind === 'heart') { drawHeart(g); continue; }
+    if (g.kind === 'bomb') { drawBomb(g); continue; }
+    const pulse = 0.7 + Math.sin(g.bob) * 0.3;
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.bob * 0.4);
+    ctx.shadowColor = '#5fe6c4'; ctx.shadowBlur = 10;
+    ctx.fillStyle = '#5fe6c4';
+    ctx.globalAlpha = g.life < 2 ? g.life / 2 : 1;
+    const s = 3.4 * pulse;
+    ctx.beginPath();
+    ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+}
+
+function drawBullets() {
+  // cheap glow: draw a larger semi-transparent circle, then the bright core
+  for (const b of game.bullets) {
+    ctx.fillStyle = 'rgba(255,206,79,0.25)';
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 4, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffe9a8';
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+  }
+}
+
+function drawEnemies() {
+  for (const e of game.enemies) drawEnemy(e);
+}
+
+function drawParticles() {
+  for (const pa of game.parts) {
+    ctx.globalAlpha = clamp(pa.life / pa.max, 0, 1);
+    ctx.fillStyle = pa.color;
+    ctx.beginPath(); ctx.arc(pa.x, pa.y, pa.size, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFloaters() {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const f of game.floats) {
+    ctx.globalAlpha = clamp(f.life / 0.8, 0, 1);
+    ctx.font = '700 ' + f.size + 'px Chakra Petch, sans-serif';
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.txt, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawHeart(g) {
@@ -134,11 +161,10 @@ function drawOrbs(p) {
   for (let k = 0; k < p.orbCount; k++) {
     const a = p.orbAngle + k / p.orbCount * TAU;
     const ox = p.x + Math.cos(a) * R, oy = p.y + Math.sin(a) * R;
-    ctx.save();
-    ctx.shadowColor = '#7bd0ff'; ctx.shadowBlur = 10;
+    ctx.fillStyle = 'rgba(123,208,255,0.3)';
+    ctx.beginPath(); ctx.arc(ox, oy, 9, 0, TAU); ctx.fill();
     ctx.fillStyle = '#bfe6ff';
     ctx.beginPath(); ctx.arc(ox, oy, 5, 0, TAU); ctx.fill();
-    ctx.restore();
   }
 }
 
@@ -166,7 +192,7 @@ function drawPlayer(p) {
     ctx.fill();
   }
 
-  // body (arrowhead); blinks during i-frames
+  // body glow (one shadowBlur for the player is fine -- it's a single draw)
   const blink = p.iframe > 0 && Math.floor(p.iframe * 20) % 2 === 0;
   ctx.shadowColor = '#f3ead7'; ctx.shadowBlur = 14;
   ctx.fillStyle = blink ? 'rgba(243,234,215,0.4)' : '#f3ead7';
@@ -188,28 +214,35 @@ function drawEnemy(e) {
   ctx.save();
   ctx.translate(e.x, e.y);
   const col = e.flash > 0 ? '#ffffff' : e.color;
-  ctx.shadowColor = e.color; ctx.shadowBlur = e.flash > 0 ? 16 : 8;
+
+  // cheap glow: slightly larger, semi-transparent background shape
+  ctx.globalAlpha = e.flash > 0 ? 0.5 : 0.25;
+  ctx.fillStyle = e.color;
+  const gr = e.r + 6;
+  ctx.beginPath(); ctx.arc(0, 0, gr, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
+
   ctx.fillStyle = col; ctx.strokeStyle = col;
 
-  if (e.type === 'grunt') {                 // diamond
+  if (e.type === 'grunt') {
     ctx.rotate(e.wob * 0.5);
     ctx.beginPath();
     ctx.moveTo(0, -e.r); ctx.lineTo(e.r, 0); ctx.lineTo(0, e.r); ctx.lineTo(-e.r, 0); ctx.closePath();
     ctx.fill();
-  } else if (e.type === 'rusher') {         // triangle aimed at player
+  } else if (e.type === 'rusher') {
     const ang = Math.atan2(game.player.y - e.y, game.player.x - e.x);
     ctx.rotate(ang);
     ctx.beginPath();
     ctx.moveTo(e.r + 3, 0); ctx.lineTo(-e.r, -e.r * 0.8); ctx.lineTo(-e.r, e.r * 0.8); ctx.closePath();
     ctx.fill();
-  } else if (e.type === 'tank') {           // hexagon w/ inner ring
+  } else if (e.type === 'tank') {
     ctx.rotate(e.wob * 0.2);
     ctx.beginPath();
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; const x = Math.cos(a) * e.r, y = Math.sin(a) * e.r; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
     ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(12,13,26,0.5)'; ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(12,13,26,0.5)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5, 0, TAU); ctx.stroke();
-  } else if (e.type === 'elite') {          // pulsing ringed core w/ spikes
+  } else if (e.type === 'elite') {
     ctx.rotate(e.wob * 0.3);
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, e.r, 0, TAU); ctx.stroke();
@@ -221,7 +254,7 @@ function drawEnemy(e) {
       ctx.lineTo(Math.cos(a) * (e.r + 9), Math.sin(a) * (e.r + 9));
       ctx.stroke();
     }
-  } else {                                   // splitter — pentagon
+  } else {
     ctx.rotate(e.wob * 0.6);
     ctx.beginPath();
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU - Math.PI / 2; const x = Math.cos(a) * e.r, y = Math.sin(a) * e.r; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
