@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="80%">
+      <stop offset="0%" stop-color="#15172e"/>
+      <stop offset="60%" stop-color="#0c0d1a"/>
+      <stop offset="100%" stop-color="#07070f"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0 H0 V48" fill="none" stroke="rgba(154,123,255,0.08)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <text x="600" y="300" text-anchor="middle"
+        font-family="'Chakra Petch', system-ui, sans-serif" font-weight="700"
+        font-size="180" letter-spacing="18" fill="#f3ead7">SURGE</text>
+  <text x="603" y="303" text-anchor="middle"
+        font-family="'Chakra Petch', system-ui, sans-serif" font-weight="700"
+        font-size="180" letter-spacing="18" fill="none" stroke="#ff5d52" stroke-width="1.5" opacity="0.5">SURGE</text>
+
+  <text x="600" y="380" text-anchor="middle"
+        font-family="'Chakra Petch', system-ui, sans-serif" font-weight="600"
+        font-size="30" letter-spacing="14" fill="#5fe6c4">HOLD THE LINE · GROW STRONGER</text>
+  <text x="600" y="450" text-anchor="middle"
+        font-family="'Chakra Petch', system-ui, sans-serif" font-weight="500"
+        font-size="24" letter-spacing="6" fill="#8a8aa8">A FREE BROWSER SURVIVAL SHOOTER</text>
+</svg>

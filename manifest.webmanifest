@@ -1,0 +1,19 @@
+{
+  "name": "SURGE — arcade survival shooter",
+  "short_name": "SURGE",
+  "description": "Hold the line, grow stronger. A fast, free browser survival shooter.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0c0d1a",
+  "theme_color": "#0c0d1a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
