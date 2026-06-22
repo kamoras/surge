@@ -1,14 +1,18 @@
 # SURGE
 
-A fast, free browser survival shooter. Waves close in from every edge — your craft fires on its own, so your only job is to **stay alive and stay moving**. Collect mint shards to level up, then pick an upgrade. How long can you last?
+A fast, free browser survival shooter. Waves close in from every edge — your craft fires on its own, so your job is to **stay alive, keep moving, and chain kills**. Build a combo for a bigger score multiplier, collect mint shards to level up, and survive the elites. How long can you last?
+
+Live at **https://surge.paramain.com**.
 
 Built as a single static page: HTML, CSS, and vanilla JS canvas. No build step, no dependencies, no tracking.
 
 ## Play
 
 - **Move:** `WASD` / arrow keys, or drag on touch
-- **Pause:** `P`
-- **Mute:** `M`
+- **Dash** (brief invulnerability): `Space` / `Shift`, or double-tap on touch
+- **Pause:** `P` · **Mute:** `M`
+- **Combo:** chain kills without getting hit to raise your score multiplier — taking a hit cuts it down.
+- **Elites:** pink mini-bosses appear periodically and drop healing and screen-clearing bombs.
 - Best score is saved locally in your browser.
 
 ## Run locally
@@ -30,7 +34,7 @@ This repo is ready to deploy as-is — no framework, no build command.
 3. Framework Preset: **Other**. Build Command: *(none)*. Output Directory: *(leave default — root)*.
 4. Deploy.
 
-`vercel.json` sets clean URLs and the manifest content type. After your first deploy, update the production URL in the `<meta>` tags in `index.html` (`og:url`, `twitter` image, canonical) and in `og.svg` if you want share previews to point at your real domain.
+`vercel.json` sets clean URLs and the manifest content type. The `<meta>` tags already point at `https://surge.paramain.com` — add that domain to the Vercel project once deployed.
 
 ## Project layout
 

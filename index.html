@@ -6,21 +6,22 @@
 <title>SURGE — arcade survival shooter</title>
 
 <!-- SEO -->
-<meta name="description" content="SURGE is a fast, free browser survival shooter. Hold the line, collect shards, level up, and see how long you can last. No install — just play.">
+<meta name="description" content="SURGE is a fast, free browser survival shooter. Hold the line, chain combos, dash through swarms, and see how long you can last. No install — just play.">
 <meta name="theme-color" content="#0c0d1a">
 <meta name="color-scheme" content="dark">
-<link rel="canonical" href="https://surge.vercel.app/">
+<link rel="canonical" href="https://surge.paramain.com/">
 
 <!-- Open Graph / social sharing -->
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="SURGE">
 <meta property="og:title" content="SURGE — arcade survival shooter">
-<meta property="og:description" content="Hold the line · grow stronger. A free browser survival shooter. How long can you last?">
-<meta property="og:image" content="/og.svg">
-<meta property="og:url" content="https://surge.vercel.app/">
+<meta property="og:description" content="Hold the line · chain combos · grow stronger. A free browser survival shooter. How long can you last?">
+<meta property="og:image" content="https://surge.paramain.com/og.svg">
+<meta property="og:url" content="https://surge.paramain.com/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SURGE — arcade survival shooter">
-<meta name="twitter:description" content="Hold the line · grow stronger. Free to play in your browser.">
-<meta name="twitter:image" content="/og.svg">
+<meta name="twitter:description" content="Hold the line · chain combos · grow stronger. Free to play in your browser.">
+<meta name="twitter:image" content="https://surge.paramain.com/og.svg">
 
 <!-- Icons / PWA -->
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -40,6 +41,7 @@
     --mint:#5fe6c4;       /* xp / positive */
     --gold:#ffce4f;       /* levelup */
     --violet:#9a7bff;     /* special */
+    --pink:#ff7ad0;       /* elite */
     --muted:#8a8aa8;
     --grid:rgba(154,123,255,0.06);
   }
@@ -91,6 +93,10 @@
   #timer{font-size:30px;letter-spacing:.04em;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.5);}
   .substat{font-size:12px;color:var(--muted);letter-spacing:.06em;}
   .substat b{color:var(--cream);font-weight:700;}
+  #comboLine{
+    font-size:15px;font-weight:700;letter-spacing:.06em;color:var(--gold);
+    opacity:0;transition:opacity .15s;text-shadow:0 1px 6px rgba(0,0,0,.5);
+  }
   #muteBtn{
     pointer-events:auto;cursor:pointer;
     margin-left:auto;align-self:flex-start;
@@ -123,7 +129,7 @@
   .tagline{margin-top:14px;color:var(--mint);letter-spacing:.32em;font-size:13px;font-weight:600;text-transform:uppercase;}
   .bestline{margin-top:10px;color:var(--gold);letter-spacing:.14em;font-size:13px;font-weight:600;min-height:16px;}
   .howto{
-    margin-top:26px;max-width:420px;color:var(--muted);font-size:14px;line-height:1.7;
+    margin-top:26px;max-width:440px;color:var(--muted);font-size:14px;line-height:1.7;
   }
   .howto b{color:var(--cream);font-weight:600;}
   .key{
@@ -182,6 +188,7 @@
 
   @media (max-width:560px){
     #timer{font-size:24px;}
+    #comboLine{font-size:13px;}
     .card{width:46%;min-width:140px;min-height:170px;padding:16px 12px;}
     .card .ic{font-size:32px;}
     .howto{font-size:13px;}
@@ -201,6 +208,7 @@
       </div>
       <div class="stats">
         <div id="timer">0:00</div>
+        <div id="comboLine">×1.0</div>
         <div class="substat">KILLS <b id="kills">0</b></div>
         <div class="substat">SCORE <b id="score">0</b></div>
       </div>
@@ -211,13 +219,15 @@
   <!-- Start -->
   <div id="start" class="screen">
     <div class="title">SURGE</div>
-    <div class="tagline">hold the line · grow stronger</div>
+    <div class="tagline">hold the line · chain combos · grow stronger</div>
     <div class="bestline" id="startBest"></div>
     <div class="howto">
-      Waves close in from every edge. Your craft fires on its own — your only job is to
-      <b>stay alive and stay moving</b>. Collect <span style="color:var(--mint)">mint shards</span> to level up, then pick an upgrade.<br><br>
-      <b>Move</b> &nbsp;<span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / arrows &nbsp;·&nbsp; or <b>drag</b> on touch<br>
-      <b>Pause</b> <span class="key">P</span> &nbsp;·&nbsp; <b>Mute</b> <span class="key">M</span>
+      Waves close in from every edge. Your craft fires on its own — your job is to
+      <b>stay alive, keep moving, and chain kills</b>. Build a <span style="color:var(--gold)">combo</span> for a
+      bigger score multiplier. Collect <span style="color:var(--mint)">mint shards</span> to level up, then pick an upgrade.
+      Watch for <span style="color:var(--pink)">elites</span> — they drop healing and bombs.<br><br>
+      <b>Move</b> <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / arrows &nbsp;·&nbsp; or <b>drag</b> on touch<br>
+      <b>Dash</b> <span class="key">Space</span> / <span class="key">Shift</span> &nbsp;(double-tap on touch) &nbsp;·&nbsp; <b>Pause</b> <span class="key">P</span>
     </div>
     <button class="btn" id="startBtn">Play</button>
   </div>
@@ -292,6 +302,9 @@ const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;};
 const TAU=Math.PI*2;
 function pick(arr){return arr[randi(0,arr.length-1)];}
 
+const COMBO_WINDOW = 2.6;   // seconds before a combo decays
+function comboMult(){ return 1 + Math.min(game.combo,120)*0.04; }  // up to ~5.8x
+
 /* ============================================================
    AUDIO — tiny Web Audio synth
    ============================================================ */
@@ -335,9 +348,14 @@ const Sound = (()=>{
     isMuted(){ return muted; },
     shoot(){ blip(660,0.05,'square',0.10,420); },
     hit(){ noise(0.05,0.12,1400); },
+    crit(){ blip(1200,0.08,'square',0.14,1900); noise(0.05,0.10,2200); },
     kill(){ noise(0.12,0.22,600); blip(180,0.12,'sawtooth',0.12,90); },
     pickup(){ blip(880,0.06,'triangle',0.10,1320); },
     hurt(){ blip(140,0.22,'sawtooth',0.3,60); noise(0.1,0.18,300); },
+    dash(){ noise(0.14,0.10,1800); blip(300,0.14,'sine',0.09,1000); },
+    heal(){ [660,880,1175].forEach((f,i)=>setTimeout(()=>blip(f,0.14,'sine',0.12),i*45)); },
+    bomb(){ noise(0.45,0.4,180); blip(120,0.5,'sawtooth',0.22,38); },
+    elite(){ [233,233].forEach((f,i)=>setTimeout(()=>blip(f,0.3,'sawtooth',0.2,180),i*180)); },
     level(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>blip(f,0.22,'triangle',0.22),i*55)); },
     over(){ [440,392,330,247].forEach((f,i)=>setTimeout(()=>blip(f,0.4,'sawtooth',0.22),i*130)); }
   };
@@ -353,13 +371,18 @@ window.addEventListener('keydown', e=>{
   keys[k]=true;
   if(k==='p') togglePause();
   if(k==='m') toggleMute();
+  if((k===' '||k==='shift') && !e.repeat) tryDash();
 });
 window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
 
-// touch joystick
+// touch joystick (+ double-tap to dash)
 let touch={active:false, ox:0, oy:0, x:0, y:0, dx:0, dy:0};
+let lastTouchTap=0;
 function touchStart(e){
   if(game.state!=='playing') return;
+  const now=performance.now();
+  if(now-lastTouchTap < 280) tryDash();
+  lastTouchTap=now;
   const t=e.changedTouches[0];
   touch.active=true; touch.ox=t.clientX; touch.oy=t.clientY; touch.x=t.clientX; touch.y=t.clientY;
 }
@@ -386,9 +409,11 @@ cv.addEventListener('touchcancel', touchEnd);
 const game = {
   state:'menu',            // menu | playing | levelup | paused | over
   time:0, kills:0, score:0,
-  shake:0, slow:0, best:0,
+  shake:0, slow:0, flash:0, best:0,
+  combo:0, comboTimer:0,
+  eliteTimer:0, lastMoveX:1, lastMoveY:0,
   player:null, enemies:[], bullets:[], gems:[], parts:[], floats:[],
-  spawnTimer:0, fireTimer:0, level:1, xp:0, xpNeed:6,
+  spawnTimer:0, fireTimer:0, level:1, xp:0, xpNeed:6, pendingLevels:0,
 };
 game.best = loadBest();
 
@@ -398,6 +423,9 @@ function makePlayer(){
     speed:225, dmg:9, fireRate:0.42, projSpeed:520, projCount:1,
     pierce:0, range:95, regen:0, aim:0,
     iframe:0, muzzle:0, projSize:4.2, spread:0.18,
+    crit:0, critMult:2.1, lifesteal:0,
+    orbCount:0, orbAngle:0,
+    dashCd:2.2, dashTimer:0, dashing:0, dashVX:0, dashVY:0,
   };
 }
 
@@ -438,8 +466,21 @@ function addEnemy(type, pos){
     hp:base.hp*hpScale, maxHp:base.hp*hpScale,
     speed:base.speed*(1+t/180), dmg:base.dmg,
     color:base.color, xp:base.xp, score:base.score,
-    flash:0, wob:rand(0,TAU),
+    flash:0, wob:rand(0,TAU), orbCd:0,
   });
+}
+function spawnElite(){
+  const t=game.time, pos=edgePoint();
+  const hp = 220 + t*4;
+  game.enemies.push({
+    type:'elite', x:pos.x, y:pos.y, r:32,
+    hp, maxHp:hp, speed:44 + t*0.06, dmg:22,
+    color:'#ff7ad0', xp:16, score:220,
+    flash:0, wob:rand(0,TAU), orbCd:0, isElite:true,
+  });
+  floatText(W/2, 70, '⚠  ELITE INCOMING', '#ff7ad0', true);
+  game.shake=Math.min(game.shake+10,16);
+  Sound.elite();
 }
 
 /* ============================================================
@@ -466,6 +507,14 @@ const UPGRADES = [
     apply:p=>{p.projSize*=1.4; p.dmg*=1.1;}},
   {id:'velo', ic:'»',  nm:'Hypervelocity',ds:'+30% projectile speed',      tier:'common', acc:'#ffce4f',
     apply:p=>p.projSpeed*=1.3},
+  {id:'crit', ic:'✦',  nm:'Targeting Matrix', ds:'+12% critical chance (×2.1 dmg)', tier:'rare', acc:'#ffce4f',
+    apply:p=>p.crit=Math.min(p.crit+0.12,0.85)},
+  {id:'orb',  ic:'◌',  nm:'Aegis Shards', ds:'+1 orbiting shard that shreds on contact', tier:'rare', acc:'#7bd0ff',
+    apply:p=>p.orbCount++},
+  {id:'leech',ic:'♥',  nm:'Leech Field',  ds:'heal +0.6 HP per kill',      tier:'rare',   acc:'#5fe6c4',
+    apply:p=>p.lifesteal+=0.6},
+  {id:'dash', ic:'↯',  nm:'Phase Drive',  ds:'−30% dash cooldown',         tier:'common', acc:'#9a7bff',
+    apply:p=>p.dashCd*=0.7},
 ];
 
 function offerUpgrades(){
@@ -510,11 +559,42 @@ function floatText(x,y,txt,color,big){
 }
 
 /* ============================================================
+   DASH
+   ============================================================ */
+function tryDash(){
+  if(game.state!=='playing') return;
+  const p=game.player;
+  if(!p || p.dashTimer>0 || p.dashing>0) return;
+  // dash direction: current input, else last movement direction
+  let ix=0, iy=0;
+  if(keys['w']||keys['arrowup']) iy-=1;
+  if(keys['s']||keys['arrowdown']) iy+=1;
+  if(keys['a']||keys['arrowleft']) ix-=1;
+  if(keys['d']||keys['arrowright']) ix+=1;
+  if(touch.active){ ix+=touch.dx; iy+=touch.dy; }
+  let dx, dy;
+  const im=Math.hypot(ix,iy);
+  if(im>0.1){ dx=ix/im; dy=iy/im; }
+  else { dx=game.lastMoveX; dy=game.lastMoveY; }
+  const m=Math.hypot(dx,dy)||1; dx/=m; dy/=m;
+  const sp=p.speed*3.6;
+  p.dashVX=dx*sp; p.dashVY=dy*sp;
+  p.dashing=0.14;
+  p.dashTimer=p.dashCd;
+  p.iframe=Math.max(p.iframe,0.24);
+  Sound.dash();
+}
+
+/* ============================================================
    CORE UPDATE
    ============================================================ */
 function update(dt){
   game.time+=dt;
   const p=game.player;
+
+  // ---- combo decay ----
+  if(game.comboTimer>0){ game.comboTimer-=dt; if(game.comboTimer<=0) game.combo=0; }
+  if(game.flash>0) game.flash=Math.max(0, game.flash-dt*1.8);
 
   // ---- difficulty / spawning ----
   const t=game.time;
@@ -526,6 +606,9 @@ function update(dt){
     if(t>20 && Math.random()<0.12) count+=randi(2,4); // mini-burst
     for(let i=0;i<count;i++) spawnEnemy();
   }
+  // ---- elite cadence ----
+  game.eliteTimer-=dt;
+  if(game.eliteTimer<=0){ game.eliteTimer=rand(34,44); spawnElite(); }
 
   // ---- player movement ----
   let mx=0,my=0;
@@ -535,9 +618,20 @@ function update(dt){
   if(keys['d']||keys['arrowright']) mx+=1;
   if(touch.active){ mx+=touch.dx; my+=touch.dy; }
   const mag=Math.hypot(mx,my);
-  if(mag>0){ mx/=mag; my/=mag; if(mag>1){} }
-  p.x=clamp(p.x+mx*p.speed*dt, p.r, W-p.r);
-  p.y=clamp(p.y+my*p.speed*dt, p.r, H-p.r);
+  if(mag>0){ mx/=mag; my/=mag; game.lastMoveX=mx; game.lastMoveY=my; }
+
+  if(p.dashTimer>0) p.dashTimer-=dt;
+  if(p.dashing>0){
+    p.dashing-=dt;
+    // dash trail
+    game.parts.push({x:p.x,y:p.y,vx:0,vy:0,life:0.2,max:0.2,color:'rgba(154,123,255,0.55)',size:7});
+    p.x=clamp(p.x+p.dashVX*dt, p.r, W-p.r);
+    p.y=clamp(p.y+p.dashVY*dt, p.r, H-p.r);
+    p.dashVX*=0.84; p.dashVY*=0.84;
+  } else {
+    p.x=clamp(p.x+mx*p.speed*dt, p.r, W-p.r);
+    p.y=clamp(p.y+my*p.speed*dt, p.r, H-p.r);
+  }
 
   if(p.iframe>0) p.iframe-=dt;
   if(p.muzzle>0) p.muzzle-=dt;
@@ -570,7 +664,7 @@ function update(dt){
       if(b.hits && b.hits.has(e)) continue;
       const rr=(b.r+e.r);
       if(dist2(b.x,b.y,e.x,e.y) < rr*rr){
-        damageEnemy(e, b.dmg, b);
+        damageEnemy(e, b.dmg, b.x, b.y, true);
         if(!b.hits) b.hits=new Set();
         b.hits.add(e);
         if(b.pierce>0){ b.pierce--; }
@@ -584,6 +678,7 @@ function update(dt){
     const e=game.enemies[i];
     if(e.dead){ game.enemies.splice(i,1); continue; }
     if(e.flash>0) e.flash-=dt;
+    if(e.orbCd>0) e.orbCd-=dt;
     const ang=Math.atan2(p.y-e.y, p.x-e.x);
     e.wob+=dt*3;
     const wob = e.type==='rusher' ? Math.sin(e.wob)*0.4 : 0;
@@ -598,7 +693,25 @@ function update(dt){
     }
   }
 
-  // ---- gems ----
+  // ---- orbiting shards ----
+  if(p.orbCount>0){
+    p.orbAngle += dt*2.7;
+    const R=48, od=p.dmg*0.7;
+    for(let k=0;k<p.orbCount;k++){
+      const a=p.orbAngle + k/p.orbCount*TAU;
+      const ox=p.x+Math.cos(a)*R, oy=p.y+Math.sin(a)*R;
+      for(const e of game.enemies){
+        if(e.dead || e.orbCd>0) continue;
+        const rr=e.r+7;
+        if(dist2(ox,oy,e.x,e.y) < rr*rr){
+          damageEnemy(e, od, ox, oy, true);
+          e.orbCd=0.3;
+        }
+      }
+    }
+  }
+
+  // ---- gems / pickups ----
   for(let i=game.gems.length-1;i>=0;i--){
     const g=game.gems[i];
     g.life-=dt; g.bob+=dt*5;
@@ -610,7 +723,7 @@ function update(dt){
       g.x+=(p.x-g.x)/d*pull*dt;
       g.y+=(p.y-g.y)/d*pull*dt;
     }
-    if(d2 < (p.r+8)*(p.r+8)){
+    if(d2 < (p.r+10)*(p.r+10)){
       collectGem(g); game.gems.splice(i,1); continue;
     }
     if(g.life<=0){ game.gems.splice(i,1); }
@@ -648,38 +761,75 @@ function fireWeapon(p){
   p.muzzle=0.06;
 }
 
-function damageEnemy(e, dmg, b){
+function damageEnemy(e, dmg, x, y, canCrit){
+  const p=game.player;
+  let isCrit=false;
+  if(canCrit && p.crit>0 && Math.random()<p.crit){ dmg*=p.critMult; isCrit=true; }
   e.hp-=dmg; e.flash=0.09;
-  Sound.hit();
-  burst(b.x,b.y,e.color,4,160);
-  floatText(e.x, e.y-e.r-2, Math.round(dmg), '#fff', false);
+  if(isCrit) Sound.crit(); else Sound.hit();
+  burst(x,y,e.color,isCrit?7:4,isCrit?260:160);
+  floatText(e.x, e.y-e.r-2, Math.round(dmg), isCrit?'#ffce4f':'#fff', isCrit);
   if(e.hp<=0) killEnemy(e);
 }
 
 function killEnemy(e){
   if(e.dead) return;
   e.dead=true;
+  const p=game.player;
   game.kills++;
-  game.score+=e.score;
+  // combo
+  game.combo++; game.comboTimer=COMBO_WINDOW;
+  game.score+=Math.round(e.score*comboMult());
+  if(p.lifesteal>0) p.hp=Math.min(p.maxHp, p.hp+p.lifesteal);
   Sound.kill();
   game.shake=Math.min(game.shake+ (e.type==='tank'?9:4), 16);
-  burst(e.x,e.y,e.color,e.type==='tank'?22:12, 240);
-  // drop gems
-  const drops = e.type==='tank'?3:1;
-  for(let i=0;i<drops;i++){
-    game.gems.push({x:e.x+rand(-8,8), y:e.y+rand(-8,8), val:Math.ceil(e.xp/drops),
-      life:9, bob:rand(0,TAU)});
-  }
-  // splitter spawns two grunts
-  if(e.type==='splitter'){
-    for(let i=0;i<2;i++) addEnemy('grunt',{x:e.x+rand(-12,12),y:e.y+rand(-12,12)});
+  burst(e.x,e.y,e.color, e.isElite?40:(e.type==='tank'?22:12), e.isElite?360:240);
+
+  if(e.isElite){
+    // elite reward: XP shower + guaranteed heart + chance bomb
+    for(let i=0;i<6;i++) game.gems.push({kind:'xp', x:e.x+rand(-22,22), y:e.y+rand(-22,22), val:3, life:12, bob:rand(0,TAU)});
+    game.gems.push({kind:'heart', x:e.x-12, y:e.y, val:0, life:14, bob:0});
+    if(Math.random()<0.6) game.gems.push({kind:'bomb', x:e.x+12, y:e.y, val:0, life:14, bob:0});
+    game.shake=Math.min(game.shake+14,22);
+    floatText(e.x, e.y-e.r-8, 'ELITE DOWN', '#ff7ad0', true);
+  } else {
+    const drops = e.type==='tank'?3:1;
+    for(let i=0;i<drops;i++){
+      game.gems.push({kind:'xp', x:e.x+rand(-8,8), y:e.y+rand(-8,8), val:Math.ceil(e.xp/drops),
+        life:9, bob:rand(0,TAU)});
+    }
+    if(e.type==='splitter'){
+      for(let i=0;i<2;i++) addEnemy('grunt',{x:e.x+rand(-12,12),y:e.y+rand(-12,12)});
+    }
   }
 }
 
+function detonateBomb(x,y){
+  Sound.bomb();
+  game.shake=22; game.flash=0.55;
+  burst(x,y,'#ff9d3d',64,440);
+  const dmg=120 + game.time*1.4;
+  for(const e of game.enemies){ if(!e.dead) damageEnemy(e, dmg, e.x, e.y, false); }
+  floatText(x, y-22, 'BOOM', '#ff9d3d', true);
+}
+
 function collectGem(g){
+  const p=game.player;
+  if(g.kind==='heart'){
+    Sound.heal();
+    p.hp=Math.min(p.maxHp, p.hp+30);
+    burst(g.x,g.y,'#ff5d52',12,180);
+    floatText(p.x, p.y-26, '+30 HP', '#ff7a5c', true);
+    return;
+  }
+  if(g.kind==='bomb'){
+    detonateBomb(g.x,g.y);
+    return;
+  }
+  // xp
   Sound.pickup();
   game.xp+=g.val;
-  game.score+=2;
+  game.score+=Math.round(2*comboMult());
   burst(g.x,g.y,'#5fe6c4',5,120);
   let leveled=false;
   while(game.xp>=game.xpNeed){
@@ -705,6 +855,7 @@ function onLevelUp(){
 function hurtPlayer(dmg){
   const p=game.player;
   p.hp-=dmg; p.iframe=0.6;
+  game.combo=Math.floor(game.combo*0.4);   // taking a hit costs your combo
   Sound.hurt();
   game.shake=Math.min(game.shake+10,18);
   burst(p.x,p.y,'#ff5d52',10,200);
@@ -736,8 +887,10 @@ function render(){
 
   const p=game.player;
 
-  // gems
+  // gems / pickups
   for(const g of game.gems){
+    if(g.kind==='heart'){ drawHeart(g); continue; }
+    if(g.kind==='bomb'){ drawBomb(g); continue; }
     const pulse=0.7+Math.sin(g.bob)*0.3;
     ctx.save();
     ctx.translate(g.x,g.y);
@@ -775,8 +928,8 @@ function render(){
   }
   ctx.globalAlpha=1;
 
-  // player
-  if(p) drawPlayer(p);
+  // player + orbs
+  if(p){ drawPlayer(p); drawOrbs(p); }
 
   // floaters
   ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -790,6 +943,12 @@ function render(){
 
   ctx.restore();
 
+  // bomb / full-screen flash
+  if(game.flash>0){
+    ctx.fillStyle='rgba(255,255,255,'+clamp(game.flash,0,0.6)+')';
+    ctx.fillRect(0,0,W,H);
+  }
+
   // hurt vignette
   if(p && p.iframe>0){
     const a=clamp(p.iframe/0.6,0,1)*0.4;
@@ -800,12 +959,61 @@ function render(){
   }
 }
 
+function drawHeart(g){
+  ctx.save();
+  ctx.translate(g.x,g.y);
+  const s=7+Math.sin(g.bob*1.5)*1.2;
+  ctx.shadowColor='#ff5d52'; ctx.shadowBlur=14;
+  ctx.fillStyle='#ff7a5c';
+  ctx.globalAlpha = g.life<2 ? g.life/2 : 1;
+  ctx.beginPath();
+  ctx.arc(-s*0.4,-s*0.2,s*0.5,0,TAU);
+  ctx.arc( s*0.4,-s*0.2,s*0.5,0,TAU);
+  ctx.moveTo(-s*0.9,0); ctx.lineTo(0,s*0.95); ctx.lineTo(s*0.9,0); ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha=1;
+}
+function drawBomb(g){
+  ctx.save();
+  ctx.translate(g.x,g.y);
+  const pulse=1+Math.sin(g.bob*2)*0.12;
+  ctx.shadowColor='#ff9d3d'; ctx.shadowBlur=14;
+  ctx.globalAlpha = g.life<2 ? g.life/2 : 1;
+  ctx.fillStyle='#ff9d3d';
+  ctx.beginPath(); ctx.arc(0,0,7*pulse,0,TAU); ctx.fill();
+  ctx.fillStyle='#0c0d1a';
+  ctx.beginPath(); ctx.arc(0,0,3,0,TAU); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha=1;
+}
+
+function drawOrbs(p){
+  if(p.orbCount<=0) return;
+  const R=48;
+  for(let k=0;k<p.orbCount;k++){
+    const a=p.orbAngle + k/p.orbCount*TAU;
+    const ox=p.x+Math.cos(a)*R, oy=p.y+Math.sin(a)*R;
+    ctx.save();
+    ctx.shadowColor='#7bd0ff'; ctx.shadowBlur=10;
+    ctx.fillStyle='#bfe6ff';
+    ctx.beginPath(); ctx.arc(ox,oy,5,0,TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+
 function drawPlayer(p){
   ctx.save();
   ctx.translate(p.x,p.y);
   // pickup range ring (faint)
   ctx.strokeStyle='rgba(154,123,255,0.10)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.arc(0,0,p.range,0,TAU); ctx.stroke();
+
+  // dash recharge ring
+  const dr = p.dashTimer>0 ? clamp(1 - p.dashTimer/p.dashCd,0,1) : 1;
+  ctx.strokeStyle = dr>=1 ? 'rgba(154,123,255,0.75)' : 'rgba(154,123,255,0.28)';
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(0,0,p.r+7,-Math.PI/2,-Math.PI/2 + dr*TAU); ctx.stroke();
 
   ctx.rotate(p.aim);
   // muzzle flash
@@ -835,7 +1043,7 @@ function drawEnemy(e){
   ctx.translate(e.x,e.y);
   const col = e.flash>0 ? '#ffffff' : e.color;
   ctx.shadowColor=e.color; ctx.shadowBlur= e.flash>0?16:8;
-  ctx.fillStyle=col;
+  ctx.fillStyle=col; ctx.strokeStyle=col;
   if(e.type==='grunt'){
     // diamond
     ctx.rotate(e.wob*0.5);
@@ -858,6 +1066,19 @@ function drawEnemy(e){
     // inner ring
     ctx.shadowBlur=0; ctx.strokeStyle='rgba(12,13,26,0.5)'; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(0,0,e.r*0.5,0,TAU); ctx.stroke();
+  } else if(e.type==='elite'){
+    // pulsing ringed core with spikes
+    ctx.rotate(e.wob*0.3);
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,e.r,0,TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,0,e.r*0.6,0,TAU); ctx.fill();
+    for(let i=0;i<8;i++){
+      const a=i/8*TAU;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a)*e.r*0.92, Math.sin(a)*e.r*0.92);
+      ctx.lineTo(Math.cos(a)*(e.r+9), Math.sin(a)*(e.r+9));
+      ctx.stroke();
+    }
   } else { // splitter — pentagon
     ctx.rotate(e.wob*0.6);
     ctx.beginPath();
@@ -866,7 +1087,7 @@ function drawEnemy(e){
   }
   ctx.restore();
 
-  // hp bar for tanks/splitters
+  // hp bar for big enemies
   if(e.maxHp>20 && e.hp<e.maxHp){
     const w=e.r*2, h=3;
     ctx.fillStyle='rgba(0,0,0,0.5)';
@@ -888,6 +1109,13 @@ function updateHUD(){
   document.getElementById('timer').textContent=fmtTime(game.time);
   document.getElementById('kills').textContent=game.kills;
   document.getElementById('score').textContent=game.score;
+  const cl=document.getElementById('comboLine');
+  if(game.combo>=3){
+    cl.style.opacity='1';
+    cl.textContent='×'+comboMult().toFixed(1)+'  ·  '+game.combo+' COMBO';
+  } else {
+    cl.style.opacity='0';
+  }
 }
 function fmtTime(s){ const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
 
@@ -906,13 +1134,15 @@ function startGame(){
   Sound.init();
   resize();
   Object.assign(game,{
-    state:'playing', time:0, kills:0, score:0, shake:0, slow:0,
+    state:'playing', time:0, kills:0, score:0, shake:0, slow:0, flash:0,
+    combo:0, comboTimer:0, eliteTimer:42, lastMoveX:1, lastMoveY:0,
     enemies:[], bullets:[], gems:[], parts:[], floats:[],
     spawnTimer:0.5, fireTimer:0, level:1, xp:0, xpNeed:6, pendingLevels:0,
   });
   game.player=makePlayer();
   hide('start'); hide('over'); hide('pause'); hide('levelup');
   document.getElementById('hud').classList.add('on');
+  document.getElementById('comboLine').style.opacity='0';
   lastT=performance.now();
 }
 
