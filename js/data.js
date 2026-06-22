@@ -9,7 +9,7 @@
 
 export const ETYPES = {
   grunt:    { r: 14, hp: 22,  speed: 58,  dmg: 9,  color: '#ff5d52', xp: 1, score: 10 },
-  rusher:   { r: 10, hp: 14,  speed: 130, dmg: 7,  color: '#ff9d3d', xp: 1, score: 14 },
+  rusher:   { r: 10, hp: 14,  speed: 105, dmg: 7,  color: '#ff9d3d', xp: 1, score: 14 },
   tank:     { r: 24, hp: 90,  speed: 34,  dmg: 18, color: '#c33b4f', xp: 3, score: 30 },
   splitter: { r: 16, hp: 35,  speed: 65,  dmg: 8,  color: '#c77bff', xp: 2, score: 20 },
   shielder: { r: 17, hp: 50,  speed: 48,  dmg: 10, color: '#4fc3f7', xp: 2, score: 24 },

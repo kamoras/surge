@@ -48,6 +48,8 @@ export function damageEnemy(e, dmg, x, y, canCrit) {
       return;
     }
   }
+  // armored bosses take 50% less damage
+  if (e.bossDef === 'armored') dmg *= 0.5;
   let isCrit = false;
   if (canCrit && p.crit > 0 && Math.random() < p.crit) { dmg *= p.critMult; isCrit = true; }
   e.hp -= dmg; e.flash = 0.09;
@@ -114,7 +116,11 @@ function killEnemy(e) {
     game.gems.push({ kind: 'heart', x: e.x - 12, y: e.y, val: 0, life: 14, bob: 0 });
     if (Math.random() < 0.6) game.gems.push({ kind: 'bomb', x: e.x + 12, y: e.y, val: 0, life: 14, bob: 0 });
     game.shake = Math.min(game.shake + 6, 12);
-    floatText(e.x, e.y - e.r - 8, 'ELITE DOWN', '#ff7ad0', true);
+    floatText(e.x, e.y - e.r - 8, e.bossName ? e.bossName.toUpperCase() + ' DOWN' : 'ELITE DOWN', '#ff7ad0', true);
+    // splitter bosses spawn grunts on death
+    if (e.bossSpec === 'splitter') {
+      for (let i = 0; i < 4; i++) addEnemy('grunt', { x: e.x + rand(-30, 30), y: e.y + rand(-30, 30) });
+    }
   } else {
     const drops = e.type === 'tank' ? 3 : 1;
     for (let i = 0; i < drops; i++) {

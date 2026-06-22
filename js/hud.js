@@ -93,7 +93,7 @@ export function startGame() {
   Object.assign(game, {
     state: 'playing', time: 0, kills: 0, score: 0, shake: 0, slow: 0, flash: 0,
     combo: 0, comboTimer: 0, maxCombo: 0, comboLostFlash: 0,
-    eliteTimer: 42, waveTimer: 0, waveNum: 0, waveLull: 0,
+    eliteTimer: 42, waveTimer: 0, waveNum: 0, waveLull: 0, bossTimer: 48, bossCount: 0,
     lastMoveX: 1, lastMoveY: 0,
     enemies: [], bullets: [], gems: [], parts: [], floats: [],
     spawnTimer: 0.3, fireTimer: 0, level: 1, xp: 0, xpNeed: 4, pendingLevels: 0,

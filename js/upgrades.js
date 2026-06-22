@@ -1,28 +1,33 @@
 /* ============================================================
    Level-up upgrade selection screen.
 
-   offerUpgrades() builds three cards from the UPGRADES table and
-   pauses the sim into the 'levelup' state. Picking a card applies
-   it and resumes (or re-offers if multiple levels were banked).
-
-   Tier filtering:
-   - Common: always available
-   - Rare: slight bias against early, but can appear any time
-   - Legendary: only offered at LV 5+, guaranteed one slot if eligible
+   One-time upgrades (boolean flags like Void Dash, Chain Lightning,
+   Surge Nova) are filtered out once taken. Stackable upgrades
+   (damage, speed, etc.) can appear multiple times.
    ============================================================ */
 import { game } from './state.js';
 import { UPGRADES } from './data.js';
 import { randi } from './utils.js';
 import { $, show, hide } from './dom.js';
 
+const ONE_TIME_IDS = new Set(['void', 'chain', 'nova']);
+
+function isAvailable(u) {
+  if (!ONE_TIME_IDS.has(u.id)) return true;
+  const p = game.player;
+  if (u.id === 'void' && p.dashExplode) return false;
+  if (u.id === 'chain' && p.chainLightning) return false;
+  if (u.id === 'nova' && p.surgeNova) return false;
+  return true;
+}
+
 export function offerUpgrades() {
   const level = game.level;
   const legendaryEligible = level >= 5;
 
-  // separate pools
-  const commons = UPGRADES.filter(u => u.tier === 'common');
-  const rares   = UPGRADES.filter(u => u.tier === 'rare');
-  const legends = UPGRADES.filter(u => u.tier === 'legendary');
+  const commons = UPGRADES.filter(u => u.tier === 'common' && isAvailable(u));
+  const rares   = UPGRADES.filter(u => u.tier === 'rare' && isAvailable(u));
+  const legends = UPGRADES.filter(u => u.tier === 'legendary' && isAvailable(u));
 
   const chosen = [];
   const used = new Set();
@@ -35,15 +40,12 @@ export function offerUpgrades() {
     return u;
   }
 
-  // at LV 5+, guarantee one legendary slot
   if (legendaryEligible && legends.length > 0 && Math.random() < 0.55) {
     const leg = pickFrom(legends);
     if (leg) chosen.push(leg);
   }
 
-  // fill remaining slots
   while (chosen.length < 3) {
-    // bias: 60% common, 40% rare
     const pool = Math.random() < 0.6 ? commons : rares;
     const pick = pickFrom(pool) || pickFrom(commons) || pickFrom(rares);
     if (pick) chosen.push(pick);

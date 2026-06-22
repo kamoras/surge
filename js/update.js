@@ -15,6 +15,7 @@ import { burst, floatText } from './effects.js';
 import { Sound } from './audio.js';
 import { WAVES, MILESTONES, ENEMY_CAP, comboSpeedScale, comboRangeScale, comboDmgScale } from './data.js';
 import { endGame } from './hud.js';
+import { spawnBoss, updateBoss } from './boss.js';
 
 export function update(dt) {
   game.time += dt;
@@ -90,6 +91,14 @@ function updateSpawning(dt) {
 
   game.eliteTimer -= dt;
   if (game.eliteTimer <= 0) { game.eliteTimer = rand(38, 50); spawnElite(); }
+
+  // procedural bosses every ~50s, scaling with time
+  game.bossTimer -= dt;
+  if (game.bossTimer <= 0 && t > 40) {
+    game.bossTimer = rand(45, 55);
+    game.bossCount++;
+    spawnBoss();
+  }
 }
 
 function updateWaves() {
@@ -221,9 +230,12 @@ function updateEnemies(p, dt) {
     const spd = e.speed * comboSpdBoost;
 
     if (e.type === 'rusher') {
-      const wob = Math.sin(e.wob) * 0.4;
-      e.x += Math.cos(ang + wob) * spd * dt;
-      e.y += Math.sin(ang + wob) * spd * dt;
+      // rushers pause briefly every ~2s then burst forward (telegraphed)
+      const cycle = Math.sin(e.wob * 1.5);
+      const rush = cycle > 0.85 ? 2.2 : (cycle > 0.7 ? 0.15 : 1.0); // pause then burst
+      const wob = Math.sin(e.wob) * 0.3;
+      e.x += Math.cos(ang + wob) * spd * rush * dt;
+      e.y += Math.sin(ang + wob) * spd * rush * dt;
     } else if (e.type === 'tank') {
       const lunge = (Math.sin(e.wob * 0.7) > 0.92) ? 2.4 : 1;
       e.x += Math.cos(ang) * spd * lunge * dt;
@@ -255,6 +267,8 @@ function updateEnemies(p, dt) {
         e.x += Math.cos(ang) * spd * 0.4 * dt;
         e.y += Math.sin(ang) * spd * 0.4 * dt;
       }
+    } else if (e.type === 'boss') {
+      updateBoss(e, p, ang, spd, dt);
     } else if (e.type === 'elite') {
       const strafe = Math.sin(e.wob * 0.4) * 0.6;
       e.x += Math.cos(ang + strafe) * spd * dt;

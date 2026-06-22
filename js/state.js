@@ -58,7 +58,7 @@ export const game = {
   nextMilestone: 0,
   deathTimer: 0,
   graceTimer: 0,
-  landmarks: [],
+  bossTimer: 0, bossCount: 0,
 };
 game.best = loadBest();
 game.bestCombo = loadBestCombo();

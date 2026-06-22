@@ -310,6 +310,42 @@ function drawEnemy(e) {
     ctx.strokeStyle = 'rgba(12,13,26,0.4)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(0, -wr * 0.5); ctx.lineTo(0, wr * 0.5); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-wr * 0.35, 0); ctx.lineTo(wr * 0.35, 0); ctx.stroke();
+  } else if (e.type === 'boss') {
+    // bosses: pulsing core with rotating spikes, shield if shielded
+    ctx.rotate(e.wob * 0.2);
+    const pulse = 1 + Math.sin(e.wob * 3) * 0.05;
+    // outer ring
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(0, 0, e.r * pulse, 0, TAU); ctx.stroke();
+    // inner core
+    ctx.beginPath(); ctx.arc(0, 0, e.r * 0.55, 0, TAU); ctx.fill();
+    // spikes
+    const spikeCount = 6 + (e.bossTier || 1);
+    for (let i = 0; i < spikeCount; i++) {
+      const a = i / spikeCount * TAU;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * e.r * 0.88, Math.sin(a) * e.r * 0.88);
+      ctx.lineTo(Math.cos(a) * (e.r + 12), Math.sin(a) * (e.r + 12));
+      ctx.stroke();
+    }
+    // shield arc if shielded
+    if (e.bossDef === 'shielded') {
+      ctx.strokeStyle = e.flash > 0 ? '#fff' : '#80d8ff';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, e.r + 6, e.shieldAngle - Math.PI / 3, e.shieldAngle + Math.PI / 3);
+      ctx.stroke();
+    }
+    // armor indicator
+    if (e.bossDef === 'armored') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, e.r * 0.75, 0, TAU); ctx.stroke();
+    }
+    // teleport fade
+    if (e.bossMove === 'teleport' && !e.warpVisible) {
+      ctx.globalAlpha *= 0.25;
+    }
   } else if (e.type === 'elite') {
     ctx.rotate(e.wob * 0.3);
     ctx.lineWidth = 3;
@@ -332,11 +368,20 @@ function drawEnemy(e) {
 
   // hp bar for big enemies
   if (e.maxHp > 20 && e.hp < e.maxHp) {
-    const w = e.r * 2, h = 3;
+    const w = e.type === 'boss' ? e.r * 3 : e.r * 2;
+    const h = e.type === 'boss' ? 5 : 3;
+    const by = e.y - e.r - (e.type === 'boss' ? 16 : 9);
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(e.x - w / 2, e.y - e.r - 9, w, h);
+    ctx.fillRect(e.x - w / 2, by, w, h);
     ctx.fillStyle = e.color;
-    ctx.fillRect(e.x - w / 2, e.y - e.r - 9, w * clamp(e.hp / e.maxHp, 0, 1), h);
+    ctx.fillRect(e.x - w / 2, by, w * clamp(e.hp / e.maxHp, 0, 1), h);
+    // boss name above HP bar
+    if (e.bossName) {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.font = '600 10px Chakra Petch, sans-serif';
+      ctx.fillStyle = '#ff7ad0';
+      ctx.fillText(e.bossName.toUpperCase(), e.x, by - 3);
+    }
   }
 }
 
