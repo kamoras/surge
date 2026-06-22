@@ -43,7 +43,7 @@ export function update(dt) {
   updateWaves();
   updateMilestones();
   updatePlayerMovement(p, dt);
-  updateCamera(p.x, p.y);
+  updateCamera(p.x, p.y, dt);
   updatePlayerTimers(p, dt);
   updateAimAndFire(p, dt);
   updateBullets(dt);

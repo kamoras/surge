@@ -13,7 +13,7 @@
    ============================================================ */
 import { game, comboMult, saveBest, saveBestCombo, saveBestTime,
          loadGamesPlayed, saveGamesPlayed, scoreRank } from './state.js';
-import { resize } from './canvas.js';
+import { resize, updateCamera, WORLD_W, WORLD_H, W, H } from './canvas.js';
 import { Sound } from './audio.js';
 import { burst } from './effects.js';
 import { makePlayer } from './entities.js';
@@ -97,6 +97,8 @@ export function startGame() {
   });
   game.player = makePlayer();
   game.player.iframe = 1.5;
+  // snap camera to player immediately (no lag on first frame)
+  updateCamera(game.player.x, game.player.y, 99);
   resetTutorial();
   hide('start'); hide('over'); hide('pause'); hide('levelup');
   dom.hud.classList.add('on');

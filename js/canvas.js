@@ -23,9 +23,18 @@ export function resize() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 
-export function updateCamera(px, py) {
-  camX = Math.max(0, Math.min(px - W / 2, WORLD_W - W));
-  camY = Math.max(0, Math.min(py - H / 2, WORLD_H - H));
+/**
+ * Camera follows the player with lag so the ship visibly moves
+ * on screen before the camera catches up. The deadzone is the
+ * area around screen center where the player can move freely
+ * without the camera shifting at all.
+ */
+export function updateCamera(px, py, dt) {
+  const targetX = Math.max(0, Math.min(px - W / 2, WORLD_W - W));
+  const targetY = Math.max(0, Math.min(py - H / 2, WORLD_H - H));
+  const speed = 4.0;
+  camX += (targetX - camX) * Math.min(speed * dt, 1);
+  camY += (targetY - camY) * Math.min(speed * dt, 1);
 }
 
 window.addEventListener('resize', resize);
