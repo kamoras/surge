@@ -73,9 +73,9 @@ export function comboMult() { return 1 + Math.min(game.combo, 120) * 0.04; }
  * gives players a concrete goal to aim for on their next run.
  */
 export function scoreRank(score) {
-  if (score >= 4000) return 'S';
-  if (score >= 2200) return 'A';
-  if (score >= 1000) return 'B';
-  if (score >= 400)  return 'C';
+  if (score >= 12000) return 'S';
+  if (score >= 6000)  return 'A';
+  if (score >= 2500)  return 'B';
+  if (score >= 800)   return 'C';
   return 'D';
 }
