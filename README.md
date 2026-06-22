@@ -1,8 +1,27 @@
-# SURGE
+<p align="center">
+  <img src="og.svg" alt="SURGE" width="640">
+</p>
+
+<h1 align="center">SURGE</h1>
+
+<p align="center">
+  <a href="https://surge.paramain.com"><img alt="Play" src="https://img.shields.io/badge/play-surge.paramain.com-5fe6c4"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-9a7bff.svg"></a>
+  <a href="https://github.com/kamoras/surge/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/kamoras/surge/actions/workflows/ci.yml/badge.svg"></a>
+</p>
 
 A fast, free browser survival shooter. Waves close in from every edge — your craft fires on its own, so your job is to **stay alive, keep moving, and chain kills**. Build a combo for a bigger score multiplier, collect mint shards to level up, and survive the elites. How long can you last?
 
-Live at **https://surge.paramain.com**.
+**[Play it now at surge.paramain.com](https://surge.paramain.com)**
+
+## Contents
+
+- [Play](#play)
+- [Run locally](#run-locally)
+- [Deploy to Vercel](#deploy-to-vercel)
+- [Project layout](#project-layout)
+- [Contributing](#contributing)
+- [License](#license)
 
 Built with vanilla HTML, CSS, and JS canvas split into native ES modules. No build step, no dependencies, no tracking — the browser loads the modules directly.
 
@@ -71,3 +90,13 @@ only reads state — so balance, rendering, and UI can be changed independently.
 ### Note on the social image
 
 `og.svg` is used for link previews. Some platforms (notably some older Twitter/Facebook crawlers) don't render SVG share images — if previews look blank there, export `og.svg` to a 1200x630 PNG (`og.png`) and point the `og:image` / `twitter:image` tags at it.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and
+guidelines, and please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Security reports go through [SECURITY.md](SECURITY.md).
+
+## License
+
+Released under the [MIT License](LICENSE).

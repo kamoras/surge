@@ -1,0 +1,16 @@
+name: Feature or balance idea
+description: Suggest a new mechanic, upgrade, enemy, or balance change
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would you like to see, and how would it play?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it worth adding?
+      description: How does it make the game more fun or more replayable?

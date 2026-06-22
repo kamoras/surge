@@ -1,0 +1,10 @@
+# Normalize line endings to LF on checkin
+* text=auto eol=lf
+
+# Keep binary assets untouched
+*.png binary
+*.jpg binary
+*.ico binary
+
+# Help GitHub's language stats reflect the actual codebase
+*.js linguist-language=JavaScript
