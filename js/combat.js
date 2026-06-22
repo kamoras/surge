@@ -1,0 +1,131 @@
+/* ============================================================
+   Combat resolution + pickups.
+
+   Firing, damage (with crits), enemy death + rewards, the bomb
+   detonation, gem/heart/bomb collection, and the level-up trigger.
+   ============================================================ */
+import { game, comboMult, COMBO_WINDOW } from './state.js';
+import { rand, TAU } from './utils.js';
+import { Sound } from './audio.js';
+import { burst, floatText } from './effects.js';
+import { addEnemy } from './entities.js';
+import { offerUpgrades } from './upgrades.js';
+import { endGame } from './hud.js';
+
+export function fireWeapon(p) {
+  const n = p.projCount;
+  const base = p.aim;
+  for (let i = 0; i < n; i++) {
+    const off = n === 1 ? 0 : (i - (n - 1) / 2) * p.spread;
+    const a = base + off;
+    game.bullets.push({
+      x: p.x + Math.cos(a) * p.r, y: p.y + Math.sin(a) * p.r,
+      vx: Math.cos(a) * p.projSpeed, vy: Math.sin(a) * p.projSpeed,
+      r: p.projSize, dmg: p.dmg, life: 1.6, pierce: p.pierce, hits: null,
+    });
+  }
+  p.muzzle = 0.06;
+}
+
+/** Apply damage at (x,y); `canCrit` enables a player crit roll. */
+export function damageEnemy(e, dmg, x, y, canCrit) {
+  const p = game.player;
+  let isCrit = false;
+  if (canCrit && p.crit > 0 && Math.random() < p.crit) { dmg *= p.critMult; isCrit = true; }
+  e.hp -= dmg; e.flash = 0.09;
+  if (isCrit) Sound.crit(); else Sound.hit();
+  burst(x, y, e.color, isCrit ? 7 : 4, isCrit ? 260 : 160);
+  floatText(e.x, e.y - e.r - 2, Math.round(dmg), isCrit ? '#ffce4f' : '#fff', isCrit);
+  if (e.hp <= 0) killEnemy(e);
+}
+
+function killEnemy(e) {
+  if (e.dead) return;
+  e.dead = true;
+  const p = game.player;
+  game.kills++;
+  // combo: each kill bumps the multiplier and refreshes the decay timer
+  game.combo++; game.comboTimer = COMBO_WINDOW;
+  game.score += Math.round(e.score * comboMult());
+  if (p.lifesteal > 0) p.hp = Math.min(p.maxHp, p.hp + p.lifesteal);
+  Sound.kill();
+  game.shake = Math.min(game.shake + (e.type === 'tank' ? 9 : 4), 16);
+  burst(e.x, e.y, e.color, e.isElite ? 40 : (e.type === 'tank' ? 22 : 12), e.isElite ? 360 : 240);
+
+  if (e.isElite) {
+    // elite reward: XP shower + guaranteed heart + chance of a bomb
+    for (let i = 0; i < 6; i++) game.gems.push({ kind: 'xp', x: e.x + rand(-22, 22), y: e.y + rand(-22, 22), val: 3, life: 12, bob: rand(0, TAU) });
+    game.gems.push({ kind: 'heart', x: e.x - 12, y: e.y, val: 0, life: 14, bob: 0 });
+    if (Math.random() < 0.6) game.gems.push({ kind: 'bomb', x: e.x + 12, y: e.y, val: 0, life: 14, bob: 0 });
+    game.shake = Math.min(game.shake + 14, 22);
+    floatText(e.x, e.y - e.r - 8, 'ELITE DOWN', '#ff7ad0', true);
+  } else {
+    const drops = e.type === 'tank' ? 3 : 1;
+    for (let i = 0; i < drops; i++) {
+      game.gems.push({ kind: 'xp', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), val: Math.ceil(e.xp / drops), life: 9, bob: rand(0, TAU) });
+    }
+    if (e.type === 'splitter') {
+      for (let i = 0; i < 2; i++) addEnemy('grunt', { x: e.x + rand(-12, 12), y: e.y + rand(-12, 12) });
+    }
+  }
+}
+
+/** Screen-clearing blast: heavy damage to every enemy + a white flash. */
+export function detonateBomb(x, y) {
+  Sound.bomb();
+  game.shake = 22; game.flash = 0.55;
+  burst(x, y, '#ff9d3d', 64, 440);
+  const dmg = 120 + game.time * 1.4;
+  for (const e of game.enemies) { if (!e.dead) damageEnemy(e, dmg, e.x, e.y, false); }
+  floatText(x, y - 22, 'BOOM', '#ff9d3d', true);
+}
+
+export function collectGem(g) {
+  const p = game.player;
+  if (g.kind === 'heart') {
+    Sound.heal();
+    p.hp = Math.min(p.maxHp, p.hp + 30);
+    burst(g.x, g.y, '#ff5d52', 12, 180);
+    floatText(p.x, p.y - 26, '+30 HP', '#ff7a5c', true);
+    return;
+  }
+  if (g.kind === 'bomb') {
+    detonateBomb(g.x, g.y);
+    return;
+  }
+  // xp shard
+  Sound.pickup();
+  game.xp += g.val;
+  game.score += Math.round(2 * comboMult());
+  burst(g.x, g.y, '#5fe6c4', 5, 120);
+  let leveled = false;
+  while (game.xp >= game.xpNeed) {
+    game.xp -= game.xpNeed;
+    game.level++;
+    game.xpNeed = Math.round(6 + game.level * 4.2 + game.level * game.level * 0.5);
+    game.pendingLevels = (game.pendingLevels || 0) + 1;
+    leveled = true;
+  }
+  if (leveled) onLevelUp();
+}
+
+function onLevelUp() {
+  Sound.level();
+  game.slow = 0.55;       // brief slow-mo windup (applied in the main loop)
+  burst(game.player.x, game.player.y, '#ffce4f', 26, 300);
+  floatText(game.player.x, game.player.y - 26, 'LEVEL ' + game.level, '#ffce4f', true);
+  game.shake = 12;
+  // open the upgrade screen after a short beat
+  setTimeout(() => { if (game.state === 'playing') offerUpgrades(); }, 260);
+}
+
+export function hurtPlayer(dmg) {
+  const p = game.player;
+  p.hp -= dmg; p.iframe = 0.6;
+  game.combo = Math.floor(game.combo * 0.4);   // taking a hit costs most of your combo
+  Sound.hurt();
+  game.shake = Math.min(game.shake + 10, 18);
+  burst(p.x, p.y, '#ff5d52', 10, 200);
+  floatText(p.x, p.y - p.r - 4, '-' + dmg, '#ff5d52', false);
+  if (p.hp <= 0) { p.hp = 0; endGame(); }
+}

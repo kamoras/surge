@@ -4,7 +4,7 @@ A fast, free browser survival shooter. Waves close in from every edge — your c
 
 Live at **https://surge.paramain.com**.
 
-Built as a single static page: HTML, CSS, and vanilla JS canvas. No build step, no dependencies, no tracking.
+Built with vanilla HTML, CSS, and JS canvas split into native ES modules. No build step, no dependencies, no tracking — the browser loads the modules directly.
 
 ## Play
 
@@ -17,7 +17,7 @@ Built as a single static page: HTML, CSS, and vanilla JS canvas. No build step, 
 
 ## Run locally
 
-It's a static site — open `index.html` directly, or serve the folder so the manifest and icons resolve over HTTP:
+It's a static site, but it uses ES modules, so it must be served over HTTP (opening `index.html` from `file://` won't load the modules):
 
 ```bash
 # any static server works; for example:
@@ -39,12 +39,34 @@ This repo is ready to deploy as-is — no framework, no build command.
 ## Project layout
 
 ```
-index.html            game + UI (everything runs from here)
+index.html            markup only (HUD + overlay screens)
+css/styles.css        all styling; palette defined once in :root
 favicon.svg           site icon
 og.svg                social share image (1200x630)
 manifest.webmanifest  PWA metadata (installable / add to home screen)
 vercel.json           static hosting config
+
+js/
+  main.js       entry point — wires UI + input, runs the loop
+  utils.js      math helpers and constants
+  audio.js      Web Audio synth (all SFX generated at runtime)
+  canvas.js     <canvas>, ctx, viewport size + resize
+  state.js      shared `game` object + best-score persistence
+  data.js       enemy archetypes + upgrade tables (tune balance here)
+  input.js      keyboard / touch
+  effects.js    particle bursts + floating text
+  entities.js   player factory, enemy/elite spawning, dash
+  combat.js     firing, damage/crits, death + rewards, pickups, level-up
+  upgrades.js   level-up card screen
+  update.js     per-frame simulation step
+  render.js     all canvas drawing
+  hud.js        HUD readouts + screen flow (start/over/pause/share)
+  dom.js        small DOM helpers
 ```
+
+Modules use ES `import`/`export`; `main.js` is loaded via `<script type="module">`.
+Game logic never touches the DOM except through `hud.js` / `dom.js`, and `render.js`
+only reads state — so balance, rendering, and UI can be changed independently.
 
 ### Note on the social image
 
