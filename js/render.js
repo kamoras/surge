@@ -111,8 +111,8 @@ function drawGrid() {
   ctx.strokeStyle = 'rgba(154,123,255,0.06)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let x = -48 + gridOff; x < W + 48; x += 48) { ctx.moveTo(x, -48); ctx.lineTo(x, H + 48); }
-  for (let y = -48 + gridOff; y < H + 48; y += 48) { ctx.moveTo(-48, y); ctx.lineTo(W + 48, y); }
+  for (let x = -48 + gridOff; x < WORLD_W + 48; x += 48) { ctx.moveTo(x, -48); ctx.lineTo(x, WORLD_H + 48); }
+  for (let y = -48 + gridOff; y < WORLD_H + 48; y += 48) { ctx.moveTo(-48, y); ctx.lineTo(WORLD_W + 48, y); }
   ctx.stroke();
 }
 
