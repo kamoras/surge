@@ -16,48 +16,59 @@ export const ETYPES = {
   warper:   { r: 11, hp: 24,  speed: 44,  dmg: 12, color: '#ab47bc', xp: 2, score: 28 },
 };
 
+/**
+ * Diminishing returns: each time you pick the same upgrade, the
+ * effect is weaker. First pick = full value. Second = 60%. Third = 35%.
+ * Fourth+ = 20%. This creates a natural power ceiling.
+ */
+function dr(p, id, values) {
+  const n = p.upgradeCounts[id] = (p.upgradeCounts[id] || 0) + 1;
+  const scale = n === 1 ? 1.0 : n === 2 ? 0.6 : n === 3 ? 0.35 : 0.2;
+  return values.map(v => typeof v === 'number' ? v * scale : v);
+}
+
 export const UPGRADES = [
-  { id: 'dmg',   ic: '⚔', nm: 'Power Core',      ds: '+30% projectile damage',          tier: 'common', acc: '#ff9d3d',
-    apply: p => p.dmg *= 1.30 },
-  { id: 'rate',  ic: '⟫', nm: 'Overclock',       ds: '+20% fire rate',                  tier: 'common', acc: '#ffce4f',
-    apply: p => p.fireRate *= 0.80 },
-  { id: 'speed', ic: '➤', nm: 'Thrusters',       ds: '+18% move speed',                 tier: 'common', acc: '#7bd0ff',
-    apply: p => p.speed *= 1.18 },
-  { id: 'hp',    ic: '❤', nm: 'Reinforce',       ds: '+25 max HP & heal 30',            tier: 'common', acc: '#ff5d52',
-    apply: p => { p.maxHp += 25; p.hp = Math.min(p.maxHp, p.hp + 30); } },
-  { id: 'range', ic: '◎', nm: 'Magnet Field',    ds: '+50% pickup range',               tier: 'common', acc: '#9a7bff',
-    apply: p => p.range *= 1.50 },
-  { id: 'velo',  ic: '»', nm: 'Hypervelocity',   ds: '+35% projectile speed',           tier: 'common', acc: '#ffce4f',
-    apply: p => p.projSpeed *= 1.35 },
-  { id: 'dash',  ic: '↯', nm: 'Phase Drive',     ds: '-35% dash cooldown',              tier: 'common', acc: '#9a7bff',
-    apply: p => p.dashCd *= 0.65 },
+  { id: 'dmg',   ic: '⚔', nm: 'Power Core',      ds: 'boost projectile damage',         tier: 'common', acc: '#ff9d3d',
+    apply: p => { const [v] = dr(p, 'dmg', [0.30]); p.dmg *= 1 + v; } },
+  { id: 'rate',  ic: '⟫', nm: 'Overclock',       ds: 'boost fire rate',                 tier: 'common', acc: '#ffce4f',
+    apply: p => { const [v] = dr(p, 'rate', [0.20]); p.fireRate *= 1 - v; } },
+  { id: 'speed', ic: '➤', nm: 'Thrusters',       ds: 'boost move speed',                tier: 'common', acc: '#7bd0ff',
+    apply: p => { const [v] = dr(p, 'speed', [0.18]); p.speed *= 1 + v; } },
+  { id: 'hp',    ic: '❤', nm: 'Reinforce',       ds: 'boost max HP & heal',             tier: 'common', acc: '#ff5d52',
+    apply: p => { const [v] = dr(p, 'hp', [25]); p.maxHp += v; p.hp = Math.min(p.maxHp, p.hp + v); } },
+  { id: 'range', ic: '◎', nm: 'Magnet Field',    ds: 'boost pickup range',              tier: 'common', acc: '#9a7bff',
+    apply: p => { const [v] = dr(p, 'range', [0.50]); p.range *= 1 + v; } },
+  { id: 'velo',  ic: '»', nm: 'Hypervelocity',   ds: 'boost projectile speed',          tier: 'common', acc: '#ffce4f',
+    apply: p => { const [v] = dr(p, 'velo', [0.35]); p.projSpeed *= 1 + v; } },
+  { id: 'dash',  ic: '↯', nm: 'Phase Drive',     ds: 'reduce dash cooldown',            tier: 'common', acc: '#9a7bff',
+    apply: p => { const [v] = dr(p, 'dash', [0.35]); p.dashCd *= 1 - v; } },
 
   { id: 'multi', ic: '⋔', nm: 'Split Barrel',    ds: '+2 projectiles per shot',         tier: 'rare',   acc: '#5fe6c4',
     apply: p => { p.projCount = Math.min(p.projCount + 2, 7); p.spread = Math.min(p.spread + 0.08, 0.55); } },
   { id: 'pierce',ic: '⇶', nm: 'Railshot',        ds: 'projectiles pierce +1 enemy',     tier: 'rare',   acc: '#7bd0ff',
-    apply: p => p.pierce++ },
-  { id: 'regen', ic: '✚', nm: 'Nanoweave',       ds: 'regen +1.5 HP/sec',               tier: 'rare',   acc: '#5fe6c4',
-    apply: p => p.regen += 1.5 },
-  { id: 'big',   ic: '●', nm: 'Heavy Rounds',    ds: '+50% projectile size & +15% dmg', tier: 'rare',   acc: '#ff9d3d',
-    apply: p => { p.projSize *= 1.5; p.dmg *= 1.15; } },
-  { id: 'crit',  ic: '✦', nm: 'Targeting Matrix',ds: '+14% critical chance (x2.5 dmg)', tier: 'rare',   acc: '#ffce4f',
-    apply: p => { p.crit = Math.min(p.crit + 0.14, 0.85); p.critMult = 2.5; } },
-  { id: 'orb',   ic: '◌', nm: 'Aegis Shards',    ds: '+1 orbiting shard that shreds on contact', tier: 'rare', acc: '#7bd0ff',
-    apply: p => p.orbCount++ },
-  { id: 'leech', ic: '♥', nm: 'Leech Field',     ds: 'heal 1 HP per kill',              tier: 'rare',   acc: '#5fe6c4',
-    apply: p => p.lifesteal += 1.0 },
-  { id: 'scharge',ic: '⚡', nm: 'Surge Capacitor', ds: '+40% surge charge speed',        tier: 'rare',   acc: '#9a7bff',
-    apply: p => p.surgeChargeRate *= 1.4 },
-  { id: 'sradius',ic: '◎', nm: 'Surge Amplifier', ds: '+35% surge blast radius',        tier: 'rare',   acc: '#9a7bff',
-    apply: p => p.surgeRadius *= 1.35 },
+    apply: p => p.pierce = Math.min(p.pierce + 1, 4) },
+  { id: 'regen', ic: '✚', nm: 'Nanoweave',       ds: 'boost HP regen',                  tier: 'rare',   acc: '#5fe6c4',
+    apply: p => { const [v] = dr(p, 'regen', [1.5]); p.regen += v; } },
+  { id: 'big',   ic: '●', nm: 'Heavy Rounds',    ds: 'bigger projectiles & more damage',tier: 'rare',   acc: '#ff9d3d',
+    apply: p => { const [s, d] = dr(p, 'big', [0.50, 0.15]); p.projSize *= 1 + s; p.dmg *= 1 + d; } },
+  { id: 'crit',  ic: '✦', nm: 'Targeting Matrix',ds: 'boost critical chance (x2.5 dmg)',tier: 'rare',   acc: '#ffce4f',
+    apply: p => { const [v] = dr(p, 'crit', [0.14]); p.crit = Math.min(p.crit + v, 0.65); p.critMult = 2.5; } },
+  { id: 'orb',   ic: '◌', nm: 'Aegis Shards',    ds: '+1 orbiting shard',               tier: 'rare',   acc: '#7bd0ff',
+    apply: p => p.orbCount = Math.min(p.orbCount + 1, 4) },
+  { id: 'leech', ic: '♥', nm: 'Leech Field',     ds: 'heal on kill',                    tier: 'rare',   acc: '#5fe6c4',
+    apply: p => { const [v] = dr(p, 'leech', [1.0]); p.lifesteal += v; } },
+  { id: 'scharge',ic: '⚡', nm: 'Surge Capacitor', ds: 'faster surge charge',            tier: 'rare',   acc: '#9a7bff',
+    apply: p => { const [v] = dr(p, 'scharge', [0.40]); p.surgeChargeRate *= 1 + v; } },
+  { id: 'sradius',ic: '◎', nm: 'Surge Amplifier', ds: 'bigger surge blast',             tier: 'rare',   acc: '#9a7bff',
+    apply: p => { const [v] = dr(p, 'sradius', [0.35]); p.surgeRadius *= 1 + v; } },
 
   { id: 'titan',  ic: '◆', nm: 'Titan Shell',     ds: '+60 max HP, +2 HP/sec regen',     tier: 'legendary', acc: '#ff5d52',
     apply: p => { p.maxHp += 60; p.hp = Math.min(p.maxHp, p.hp + 60); p.regen += 2; } },
-  { id: 'void',   ic: '◉', nm: 'Void Dash',       ds: 'dash explodes for 3x damage in a huge radius', tier: 'legendary', acc: '#9a7bff',
+  { id: 'void',   ic: '◉', nm: 'Void Dash',       ds: 'dash explodes for 3x damage',     tier: 'legendary', acc: '#9a7bff',
     apply: p => p.dashExplode = true },
-  { id: 'chain',  ic: '⚡', nm: 'Chain Lightning', ds: 'kills zap a nearby enemy for 40% damage', tier: 'legendary', acc: '#7bd0ff',
+  { id: 'chain',  ic: '⚡', nm: 'Chain Lightning', ds: 'kills zap a nearby enemy',        tier: 'legendary', acc: '#7bd0ff',
     apply: p => p.chainLightning = true },
-  { id: 'nova',   ic: '✺', nm: 'Surge Nova',      ds: 'surge fully recharges on kill during blast', tier: 'legendary', acc: '#ffce4f',
+  { id: 'nova',   ic: '✺', nm: 'Surge Nova',      ds: 'surge recharges on kill during blast', tier: 'legendary', acc: '#ffce4f',
     apply: p => p.surgeNova = true },
 ];
 

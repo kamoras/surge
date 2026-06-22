@@ -26,6 +26,7 @@ export function makePlayer() {
     surge: 0, surgeMax: 100, surgeChargeRate: 8,
     surgeRadius: 180, surgeDmgMult: 1.0,
     surgeActive: 0, surgeRing: 0, surgeNova: false,
+    upgradeCounts: {},
   };
 }
 
@@ -56,7 +57,8 @@ export function spawnEnemy() {
 
 export function addEnemy(type, pos) {
   const base = ETYPES[type], t = game.time;
-  const hpScale = t < 90 ? 1 + t / 50 : 1 + 90 / 50 + (t - 90) / 35;
+  // linear ramp early, exponential after 4min so every run eventually ends
+  const hpScale = t < 240 ? 1 + t / 50 : (1 + 240 / 50) * Math.pow(1.008, t - 240);
   let spdScale = t < 90 ? 1 + t / 220 : 1 + 90 / 220 + (t - 90) / 160;
   // cap speed scaling so late-game enemies are tough but not undodgeable
   spdScale = Math.min(spdScale, 2.2);
