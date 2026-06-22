@@ -128,6 +128,8 @@ function killEnemy(e) {
     }
     if (Math.random() < 0.05) {
       game.gems.push({ kind: 'heart', x: e.x, y: e.y, val: 0, life: 10, bob: 0 });
+    } else if (Math.random() < 0.03) {
+      game.gems.push({ kind: 'magnet', x: e.x, y: e.y, val: 0, life: 12, bob: 0 });
     }
     if (e.type === 'splitter') {
       for (let i = 0; i < 2; i++) addEnemy('grunt', { x: e.x + rand(-12, 12), y: e.y + rand(-12, 12) });
@@ -155,6 +157,17 @@ export function collectGem(g) {
   }
   if (g.kind === 'bomb') {
     detonateBomb(g.x, g.y);
+    return;
+  }
+  if (g.kind === 'magnet') {
+    Sound.pickup();
+    burst(g.x, g.y, '#9a7bff', 14, 200);
+    floatText(p.x, p.y - 26, 'MAGNET', '#9a7bff', true);
+    for (const other of game.gems) {
+      if (other === g || other.kind === 'magnet') continue;
+      other.x = p.x + rand(-15, 15);
+      other.y = p.y + rand(-15, 15);
+    }
     return;
   }
   Sound.pickup();

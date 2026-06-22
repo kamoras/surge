@@ -120,6 +120,7 @@ function drawPickups() {
   for (const g of game.gems) {
     if (g.kind === 'heart') { drawHeart(g); continue; }
     if (g.kind === 'bomb') { drawBomb(g); continue; }
+    if (g.kind === 'magnet') { drawMagnet(g); continue; }
     const pulse = 0.7 + Math.sin(g.bob) * 0.3;
     ctx.save();
     ctx.translate(g.x, g.y);
@@ -197,6 +198,20 @@ function drawBomb(g) {
   ctx.beginPath(); ctx.arc(0, 0, 7 * pulse, 0, TAU); ctx.fill();
   ctx.fillStyle = '#0c0d1a';
   ctx.beginPath(); ctx.arc(0, 0, 3, 0, TAU); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function drawMagnet(g) {
+  ctx.save();
+  ctx.translate(g.x, g.y);
+  const pulse = 1 + Math.sin(g.bob * 2) * 0.15;
+  ctx.shadowColor = '#9a7bff'; ctx.shadowBlur = 14;
+  ctx.globalAlpha = g.life < 2 ? g.life / 2 : 1;
+  ctx.strokeStyle = '#9a7bff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, 8 * pulse, 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#c77bff';
+  ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, TAU); ctx.fill();
   ctx.restore();
   ctx.globalAlpha = 1;
 }
