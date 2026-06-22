@@ -25,7 +25,7 @@ const HINTS = [
   { id: 'shielder',trigger: g => g.enemies.some(e => e.type === 'shielder'),
     text: 'Shielder -- its front blocks shots. Circle around it' },
   { id: 'warper',  trigger: g => g.enemies.some(e => e.type === 'warper'),
-    text: 'Warper -- it teleports, time your shots' },
+    text: 'Warper -- it blinks around. Keep your distance' },
 ];
 
 const shown = new Set();
