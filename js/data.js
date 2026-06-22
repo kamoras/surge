@@ -1,24 +1,22 @@
 /* ============================================================
-   Static game data: enemy archetypes, upgrades, waves, milestones.
+   Static game data.
 
-   Balance philosophy: runs should last 2-3 minutes for a decent
-   player. By minute 2, the player should feel noticeably powerful.
-   Enemy damage is moderate so mistakes are punishing but not
-   instant death. HP recovery exists through multiple channels
-   (regen, leech, hearts, elite drops) so aggressive play is viable.
+   Design philosophy: combo IS your power. Everything scales with
+   it. One hit resets it to zero. Fewer, tougher enemies -- each
+   kill matters. The game's difficulty scales with your combo, so
+   it's self-balancing: get good = harder enemies = more tension.
    ============================================================ */
 
 export const ETYPES = {
-  grunt:    { r: 13, hp: 14, speed: 62,  dmg: 6,  color: '#ff5d52', xp: 1, score: 10 },
-  rusher:   { r: 9,  hp: 8,  speed: 135, dmg: 5,  color: '#ff9d3d', xp: 1, score: 14 },
-  tank:     { r: 22, hp: 60, speed: 38,  dmg: 14, color: '#c33b4f', xp: 3, score: 30 },
-  splitter: { r: 15, hp: 22, speed: 70,  dmg: 7,  color: '#c77bff', xp: 2, score: 20 },
-  shielder: { r: 16, hp: 32, speed: 52,  dmg: 8,  color: '#4fc3f7', xp: 2, score: 24 },
-  warper:   { r: 10, hp: 16, speed: 48,  dmg: 10, color: '#ab47bc', xp: 2, score: 28 },
+  grunt:    { r: 14, hp: 22,  speed: 58,  dmg: 9,  color: '#ff5d52', xp: 1, score: 10 },
+  rusher:   { r: 10, hp: 14,  speed: 130, dmg: 7,  color: '#ff9d3d', xp: 1, score: 14 },
+  tank:     { r: 24, hp: 90,  speed: 34,  dmg: 18, color: '#c33b4f', xp: 3, score: 30 },
+  splitter: { r: 16, hp: 35,  speed: 65,  dmg: 8,  color: '#c77bff', xp: 2, score: 20 },
+  shielder: { r: 17, hp: 50,  speed: 48,  dmg: 10, color: '#4fc3f7', xp: 2, score: 24 },
+  warper:   { r: 11, hp: 24,  speed: 44,  dmg: 12, color: '#ab47bc', xp: 2, score: 28 },
 };
 
 export const UPGRADES = [
-  // -- common (appear early and often) --
   { id: 'dmg',   ic: '⚔', nm: 'Power Core',      ds: '+30% projectile damage',          tier: 'common', acc: '#ff9d3d',
     apply: p => p.dmg *= 1.30 },
   { id: 'rate',  ic: '⟫', nm: 'Overclock',       ds: '+20% fire rate',                  tier: 'common', acc: '#ffce4f',
@@ -34,9 +32,8 @@ export const UPGRADES = [
   { id: 'dash',  ic: '↯', nm: 'Phase Drive',     ds: '-35% dash cooldown',              tier: 'common', acc: '#9a7bff',
     apply: p => p.dashCd *= 0.65 },
 
-  // -- rare (appear less often, more impactful) --
   { id: 'multi', ic: '⋔', nm: 'Split Barrel',    ds: '+1 projectile per shot',          tier: 'rare',   acc: '#5fe6c4',
-    apply: p => { p.projCount++; p.spread = Math.min(p.spread + 0.05, 0.55); } },
+    apply: p => { p.projCount = Math.min(p.projCount + 1, 5); p.spread = Math.min(p.spread + 0.06, 0.55); } },
   { id: 'pierce',ic: '⇶', nm: 'Railshot',        ds: 'projectiles pierce +1 enemy',     tier: 'rare',   acc: '#7bd0ff',
     apply: p => p.pierce++ },
   { id: 'regen', ic: '✚', nm: 'Nanoweave',       ds: 'regen +1.5 HP/sec',               tier: 'rare',   acc: '#5fe6c4',
@@ -49,18 +46,11 @@ export const UPGRADES = [
     apply: p => p.orbCount++ },
   { id: 'leech', ic: '♥', nm: 'Leech Field',     ds: 'heal 1 HP per kill',              tier: 'rare',   acc: '#5fe6c4',
     apply: p => p.lifesteal += 1.0 },
-  { id: 'fury',  ic: '⚡', nm: 'Fury Engine',     ds: '+6% damage per combo hit (caps at +72%)', tier: 'rare', acc: '#ff7ad0',
-    apply: p => p.furyScale += 0.06 },
-
-  // -- surge upgrades (rare) --
-  { id: 'scharge',ic: '⚡', nm: 'Surge Capacitor', ds: '+40% surge charge speed',         tier: 'rare',   acc: '#9a7bff',
+  { id: 'scharge',ic: '⚡', nm: 'Surge Capacitor', ds: '+40% surge charge speed',        tier: 'rare',   acc: '#9a7bff',
     apply: p => p.surgeChargeRate *= 1.4 },
-  { id: 'sradius',ic: '◎', nm: 'Surge Amplifier', ds: '+35% surge blast radius',         tier: 'rare',   acc: '#9a7bff',
+  { id: 'sradius',ic: '◎', nm: 'Surge Amplifier', ds: '+35% surge blast radius',        tier: 'rare',   acc: '#9a7bff',
     apply: p => p.surgeRadius *= 1.35 },
-  { id: 'sdmg',   ic: '⚔', nm: 'Surge Overload',  ds: '+40% surge damage',               tier: 'rare',   acc: '#ff9d3d',
-    apply: p => p.surgeDmgMult *= 1.4 },
 
-  // -- legendary (only offered at LV 5+, game-changing) --
   { id: 'titan',  ic: '◆', nm: 'Titan Shell',     ds: '+60 max HP, +2 HP/sec regen',     tier: 'legendary', acc: '#ff5d52',
     apply: p => { p.maxHp += 60; p.hp = Math.min(p.maxHp, p.hp + 60); p.regen += 2; } },
   { id: 'void',   ic: '◉', nm: 'Void Dash',       ds: 'dash explodes for 3x damage in a huge radius', tier: 'legendary', acc: '#9a7bff',
@@ -83,3 +73,14 @@ export const WAVES = [
   [330, 'HELL WAVE'],
   [420, 'ENDURANCE'],
 ];
+
+/** Max enemies alive at once. Keeps the screen readable. */
+export const ENEMY_CAP = 22;
+
+/**
+ * Combo power scaling. Combo multiplies damage, speed, and pickup
+ * range. These return the multiplier for a given combo count.
+ */
+export function comboDmgScale(combo) { return 1 + Math.min(combo, 100) * 0.018; }
+export function comboSpeedScale(combo) { return 1 + Math.min(combo, 80) * 0.004; }
+export function comboRangeScale(combo) { return 1 + Math.min(combo, 60) * 0.012; }

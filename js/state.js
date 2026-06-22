@@ -6,8 +6,8 @@
    so the reference stays stable across modules.
    ============================================================ */
 
-/** Seconds a combo survives without a kill before it resets. */
-export const COMBO_WINDOW = 1.8;
+/** Seconds a combo survives without a kill before it decays. */
+export const COMBO_WINDOW = 3.0;
 
 /* ---------- best-score persistence (localStorage) ---------- */
 const BEST_KEY = 'surge_best_v1';

@@ -62,21 +62,19 @@ export function updateHUD() {
   if (p.dashTimer > 0) dom.dashBtn.classList.add('cd');
   else dom.dashBtn.classList.remove('cd');
 
-  if (game.combo >= 3) {
+  // combo is the core mechanic -- always visible
+  if (game.comboLostFlash > 0) {
     dom.comboLine.style.opacity = '1';
-    dom.comboLine.textContent = 'x' + comboMult().toFixed(1) + '  ·  ' + game.combo + ' COMBO';
-    // loss aversion: flash red when combo was just lost from a hit
-    if (game.comboLostFlash > 0) {
-      dom.comboLine.style.color = '#ff5d52';
-    } else {
-      dom.comboLine.style.color = '';
-    }
+    dom.comboLine.textContent = 'COMBO LOST';
+    dom.comboLine.style.color = '#ff5d52';
+  } else if (game.combo >= 1) {
+    dom.comboLine.style.opacity = '1';
+    dom.comboLine.textContent = game.combo + ' COMBO  x' + comboMult().toFixed(1);
+    dom.comboLine.style.color = game.combo >= 20 ? '#ffce4f' : '';
   } else {
-    dom.comboLine.style.opacity = game.comboLostFlash > 0 ? '1' : '0';
-    if (game.comboLostFlash > 0) {
-      dom.comboLine.textContent = 'COMBO LOST';
-      dom.comboLine.style.color = '#ff5d52';
-    }
+    dom.comboLine.style.opacity = '0.4';
+    dom.comboLine.textContent = '0 COMBO';
+    dom.comboLine.style.color = '';
   }
 }
 
@@ -105,20 +103,6 @@ export function startGame() {
   game.player = makePlayer();
   game.player.iframe = 1.5;
   updateCamera(game.player.x, game.player.y, 99);
-  // generate world landmarks (avoid center spawn area)
-  game.landmarks = [];
-  for (let i = 0; i < 8; i++) {
-    let lx, ly;
-    do {
-      lx = rand(120, WORLD_W - 120);
-      ly = rand(120, WORLD_H - 120);
-    } while (Math.abs(lx - WORLD_W / 2) < 300 && Math.abs(ly - WORLD_H / 2) < 300);
-    game.landmarks.push({
-      x: lx, y: ly, r: rand(40, 65),
-      kind: i < 4 ? 'xpwell' : 'slowfield',
-      cooldown: 0, pulse: rand(0, 6.28),
-    });
-  }
   resetTutorial();
   hide('start'); hide('over'); hide('pause'); hide('levelup');
   dom.hud.classList.add('on');

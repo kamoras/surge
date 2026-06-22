@@ -48,7 +48,6 @@ export function render() {
   drawStars();
   drawGrid();
   drawWorldBorder();
-  drawLandmarks();
 
   const p = game.player;
 
@@ -444,36 +443,6 @@ function drawWorldBorder() {
   }
 }
 
-function drawLandmarks() {
-  for (const lm of game.landmarks) {
-    const pulse = 0.6 + Math.sin(lm.pulse) * 0.2;
-    const onCooldown = lm.cooldown > 0;
-
-    if (lm.kind === 'xpwell') {
-      // green ring that pulses, dimmer on cooldown
-      ctx.globalAlpha = onCooldown ? 0.15 : 0.35 * pulse;
-      ctx.strokeStyle = '#5fe6c4';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(lm.x, lm.y, lm.r * pulse, 0, TAU); ctx.stroke();
-      // center dot
-      ctx.fillStyle = '#5fe6c4';
-      ctx.globalAlpha = onCooldown ? 0.1 : 0.5;
-      ctx.beginPath(); ctx.arc(lm.x, lm.y, 4, 0, TAU); ctx.fill();
-    } else {
-      // violet slow field
-      ctx.globalAlpha = 0.08 + Math.sin(lm.pulse * 0.7) * 0.04;
-      ctx.fillStyle = '#9a7bff';
-      ctx.beginPath(); ctx.arc(lm.x, lm.y, lm.r, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 0.25;
-      ctx.strokeStyle = '#9a7bff';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 6]);
-      ctx.beginPath(); ctx.arc(lm.x, lm.y, lm.r, 0, TAU); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }
-  ctx.globalAlpha = 1;
-}
 
 function drawMinimap(p) {
   if (!mmCtx) return;

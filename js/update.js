@@ -1,12 +1,9 @@
 /* ============================================================
    The per-frame simulation step.
 
-   Design notes (research-backed):
-   - Spawn lulls between waves create tension-release cycles (flow)
-   - Grace period on game start prevents frustration deaths (onboarding)
-   - Dynamic difficulty: spawn rate scales down when HP is low (flow channel)
-   - XP near level-up boosts pickup attraction (goal gradient effect)
-   - Death state runs slow-mo for 1.2s before game over (peak-end rule)
+   Core design: combo powers everything. More combo = faster player,
+   more damage, harder enemies. One hit resets combo to zero.
+   Enemy count is capped for visual clarity. Each kill matters.
    ============================================================ */
 import { game } from './state.js';
 import { W, H, WORLD_W, WORLD_H, camX, camY, updateCamera } from './canvas.js';
@@ -16,14 +13,14 @@ import { spawnEnemy, spawnElite } from './entities.js';
 import { fireWeapon, damageEnemy, hurtPlayer, collectGem } from './combat.js';
 import { burst, floatText } from './effects.js';
 import { Sound } from './audio.js';
-import { WAVES, MILESTONES } from './data.js';
+import { WAVES, MILESTONES, ENEMY_CAP, comboSpeedScale, comboRangeScale, comboDmgScale } from './data.js';
 import { endGame } from './hud.js';
 
 export function update(dt) {
   game.time += dt;
   const p = game.player;
 
-  // death slow-mo: sim runs at 20% speed, then triggers game over
+  // death slow-mo
   if (game.state === 'dying') {
     game.deathTimer -= dt;
     if (game.deathTimer <= 0) { endGame(); return; }
@@ -50,7 +47,6 @@ export function update(dt) {
   updateEnemies(p, dt);
   updateOrbs(p, dt);
   updateSurge(p, dt);
-  updateLandmarks(p, dt);
   updatePickups(p, dt);
   updateEphemera(dt);
 
@@ -69,28 +65,31 @@ function updateFlash(dt) {
 }
 
 function updateSpawning(dt) {
-  // wave lull: brief spawn pause during wave transitions (tension-release)
-  if (game.waveLull > 0) { game.waveLull -= dt; return; }
+  // don't spawn if at cap
+  if (game.enemies.length >= ENEMY_CAP) return;
 
   const t = game.time;
-  const p = game.player;
 
-  // dynamic difficulty: spawn slower when HP is critically low (flow channel)
-  const hpRatio = p.hp / p.maxHp;
-  const ddaFactor = hpRatio < 0.3 ? 1.6 : hpRatio < 0.5 ? 1.2 : 1.0;
+  // dynamic difficulty: higher combo = faster spawns
+  const comboPress = 1 - clamp(game.combo / 80, 0, 0.4);
+  const baseInterval = t < 8 ? 0.8 : 1.3 - t * 0.006;
+  const spawnInterval = Math.max(0.3, baseInterval * comboPress);
 
-  // faster spawns in the first 8 seconds so the game feels immediate
-  const baseInterval = t < 8 ? 0.7 : 1.15 - t * 0.009;
-  const spawnInterval = Math.max(0.16, baseInterval * ddaFactor);
+  // DDA: slow spawns when HP is critically low
+  const hpRatio = game.player.hp / game.player.maxHp;
+  const ddaPause = hpRatio < 0.25 ? 1.5 : 1.0;
+
   game.spawnTimer -= dt;
   if (game.spawnTimer <= 0) {
-    game.spawnTimer = spawnInterval;
-    let count = 1 + Math.floor(t / 40);
-    if (t > 20 && Math.random() < 0.12) count += randi(2, 4);
+    game.spawnTimer = spawnInterval * ddaPause;
+    const slotsLeft = ENEMY_CAP - game.enemies.length;
+    let count = Math.min(1 + Math.floor(t / 60), slotsLeft);
+    if (t > 25 && Math.random() < 0.10) count = Math.min(count + randi(1, 3), slotsLeft);
     for (let i = 0; i < count; i++) spawnEnemy();
   }
+
   game.eliteTimer -= dt;
-  if (game.eliteTimer <= 0) { game.eliteTimer = rand(34, 44); spawnElite(); }
+  if (game.eliteTimer <= 0) { game.eliteTimer = rand(38, 50); spawnElite(); }
 }
 
 function updateWaves() {
@@ -101,7 +100,6 @@ function updateWaves() {
     game.shake = Math.min(game.shake + 3, 8);
     Sound.level();
     game.waveNum++;
-    // brief lull between waves: 1.5s of no spawns (tension-release cycle)
     game.waveLull = 1.5;
   }
 }
@@ -129,6 +127,10 @@ function updatePlayerMovement(p, dt) {
   const mag = Math.hypot(mx, my);
   if (mag > 0) { mx /= mag; my /= mag; game.lastMoveX = mx; game.lastMoveY = my; }
 
+  // combo boosts movement speed
+  const spdMult = comboSpeedScale(game.combo);
+  const effectiveSpeed = p.speed * spdMult;
+
   if (p.dashTimer > 0) p.dashTimer -= dt;
   if (p.dashing > 0) {
     p.dashing -= dt;
@@ -139,12 +141,11 @@ function updatePlayerMovement(p, dt) {
       if (e.dead || e.orbCd > 0) continue;
       const rr = e.r + p.r + 6;
       if (dist2(p.x, p.y, e.x, e.y) < rr * rr) {
-        damageEnemy(e, p.dmg * 1.5, p.x, p.y, true);
+        damageEnemy(e, p.dmg * 1.5 * comboDmgScale(game.combo), p.x, p.y, true);
         e.orbCd = 0.25;
       }
     }
-    p.dashVX *= 0.84; p.dashVY *= 0.84;
-    // void dash: explode at end of dash
+    // void dash explosion at end
     if (p.dashExplode && p.dashing <= 0) {
       const dmg = p.dmg * 3;
       const r2 = 110 * 110;
@@ -152,15 +153,13 @@ function updatePlayerMovement(p, dt) {
       game.shake = Math.min(game.shake + 5, 10);
       for (const e of game.enemies) {
         if (e.dead) continue;
-        if (dist2(p.x, p.y, e.x, e.y) < r2) {
-          damageEnemy(e, dmg, p.x, p.y, true);
-        }
+        if (dist2(p.x, p.y, e.x, e.y) < r2) damageEnemy(e, dmg, p.x, p.y, true);
       }
     }
+    p.dashVX *= 0.84; p.dashVY *= 0.84;
   } else {
-    p.x = clamp(p.x + mx * p.speed * dt, p.r, WORLD_W - p.r);
-    p.y = clamp(p.y + my * p.speed * dt, p.r, WORLD_H - p.r);
-    // subtle movement trail when actively moving
+    p.x = clamp(p.x + mx * effectiveSpeed * dt, p.r, WORLD_W - p.r);
+    p.y = clamp(p.y + my * effectiveSpeed * dt, p.r, WORLD_H - p.r);
     if (mag > 0 && Math.random() < 0.35) {
       game.parts.push({ x: p.x - mx * 8, y: p.y - my * 8, vx: 0, vy: 0, life: 0.15, max: 0.15, color: 'rgba(243,234,215,0.2)', size: 2.5 });
     }
@@ -210,36 +209,37 @@ function updateBullets(dt) {
 }
 
 function updateEnemies(p, dt) {
+  // enemies get faster/tougher based on combo (dynamic difficulty)
+  const comboSpdBoost = 1 + clamp(game.combo / 100, 0, 0.5);
+
   compactInPlace(game.enemies, e => {
     if (e.dead) return false;
     if (e.flash > 0) e.flash -= dt;
     if (e.orbCd > 0) e.orbCd -= dt;
     const ang = Math.atan2(p.y - e.y, p.x - e.x);
     e.wob += dt * 3;
+    const spd = e.speed * comboSpdBoost;
 
     if (e.type === 'rusher') {
       const wob = Math.sin(e.wob) * 0.4;
-      e.x += Math.cos(ang + wob) * e.speed * dt;
-      e.y += Math.sin(ang + wob) * e.speed * dt;
+      e.x += Math.cos(ang + wob) * spd * dt;
+      e.y += Math.sin(ang + wob) * spd * dt;
     } else if (e.type === 'tank') {
       const lunge = (Math.sin(e.wob * 0.7) > 0.92) ? 2.4 : 1;
-      e.x += Math.cos(ang) * e.speed * lunge * dt;
-      e.y += Math.sin(ang) * e.speed * lunge * dt;
+      e.x += Math.cos(ang) * spd * lunge * dt;
+      e.y += Math.sin(ang) * spd * lunge * dt;
     } else if (e.type === 'splitter') {
       const orbit = Math.sin(e.wob * 0.5) * 0.5;
-      e.x += Math.cos(ang + orbit) * e.speed * dt;
-      e.y += Math.sin(ang + orbit) * e.speed * dt;
+      e.x += Math.cos(ang + orbit) * spd * dt;
+      e.y += Math.sin(ang + orbit) * spd * dt;
     } else if (e.type === 'shielder') {
-      // shield faces the player; moves directly but slightly slower
       e.shieldAngle = ang + Math.PI;
-      e.x += Math.cos(ang) * e.speed * dt;
-      e.y += Math.sin(ang) * e.speed * dt;
+      e.x += Math.cos(ang) * spd * dt;
+      e.y += Math.sin(ang) * spd * dt;
     } else if (e.type === 'warper') {
-      // blinks: visible briefly, then teleports closer
       e.warpTimer -= dt;
       if (e.warpTimer <= 0) {
         if (e.warpVisible) {
-          // teleport toward player
           const warpDist = rand(60, 120);
           e.x += Math.cos(ang) * warpDist;
           e.y += Math.sin(ang) * warpDist;
@@ -251,21 +251,19 @@ function updateEnemies(p, dt) {
           e.warpTimer = rand(0.5, 0.8);
         }
       }
-      // drift slowly even while visible
       if (e.warpVisible) {
-        e.x += Math.cos(ang) * e.speed * 0.4 * dt;
-        e.y += Math.sin(ang) * e.speed * 0.4 * dt;
+        e.x += Math.cos(ang) * spd * 0.4 * dt;
+        e.y += Math.sin(ang) * spd * 0.4 * dt;
       }
     } else if (e.type === 'elite') {
       const strafe = Math.sin(e.wob * 0.4) * 0.6;
-      e.x += Math.cos(ang + strafe) * e.speed * dt;
-      e.y += Math.sin(ang + strafe) * e.speed * dt;
+      e.x += Math.cos(ang + strafe) * spd * dt;
+      e.y += Math.sin(ang + strafe) * spd * dt;
     } else {
-      e.x += Math.cos(ang) * e.speed * dt;
-      e.y += Math.sin(ang) * e.speed * dt;
+      e.x += Math.cos(ang) * spd * dt;
+      e.y += Math.sin(ang) * spd * dt;
     }
 
-    // skip contact damage during death slow-mo and grace period
     if (game.state === 'dying') return true;
     const rr = e.r + p.r;
     if (p.iframe <= 0 && dist2(e.x, e.y, p.x, p.y) < rr * rr) {
@@ -279,7 +277,7 @@ function updateEnemies(p, dt) {
 function updateOrbs(p, dt) {
   if (p.orbCount <= 0) return;
   p.orbAngle += dt * 2.7;
-  const R = 48, od = p.dmg * 0.7;
+  const R = 48, od = p.dmg * 0.7 * comboDmgScale(game.combo);
   for (let k = 0; k < p.orbCount; k++) {
     const a = p.orbAngle + k / p.orbCount * TAU;
     const ox = p.x + Math.cos(a) * R, oy = p.y + Math.sin(a) * R;
@@ -295,7 +293,6 @@ function updateOrbs(p, dt) {
 }
 
 function updateSurge(p, dt) {
-  // charge: base rate + bonus per nearby enemy (proximity = power)
   const chargeRadius = 160;
   let nearbyCount = 0;
   for (const e of game.enemies) {
@@ -305,21 +302,19 @@ function updateSurge(p, dt) {
   const chargeRate = p.surgeChargeRate + nearbyCount * 4;
   p.surge = Math.min(p.surgeMax, p.surge + chargeRate * dt);
 
-  // expanding shockwave when surge is released
   if (p.surgeActive > 0) {
     const maxR = p.surgeRadius * (0.5 + p.surgeActive * 0.8);
-    p.surgeRing += maxR * 3.5 * dt;  // expand speed
+    // surge damage also scales with combo
+    const surgeDmg = p.dmg * 2.5 * p.surgeActive * p.surgeDmgMult * comboDmgScale(game.combo);
+    p.surgeRing += maxR * 3.5 * dt;
     if (p.surgeRing < maxR) {
-      // damage enemies the ring passes through
       const r2inner = Math.max(0, p.surgeRing - 30);
       for (const e of game.enemies) {
         if (e.dead || e.orbCd > 0) continue;
         const d = Math.sqrt(dist2(p.x, p.y, e.x, e.y));
         if (d >= r2inner && d <= p.surgeRing + 10) {
-          const dmg = p.dmg * 2.5 * p.surgeActive * p.surgeDmgMult;
-          damageEnemy(e, dmg, e.x, e.y, true);
+          damageEnemy(e, surgeDmg, e.x, e.y, true);
           e.orbCd = 0.4;
-          // knockback enemies away from player
           const ang = Math.atan2(e.y - p.y, e.x - p.x);
           const kb = 60 * p.surgeActive;
           e.x += Math.cos(ang) * kb;
@@ -332,44 +327,15 @@ function updateSurge(p, dt) {
   }
 }
 
-function updateLandmarks(p, dt) {
-  for (const lm of game.landmarks) {
-    lm.pulse += dt * 2;
-    if (lm.cooldown > 0) lm.cooldown -= dt;
-    const d2 = dist2(p.x, p.y, lm.x, lm.y);
-
-    if (lm.kind === 'xpwell') {
-      // give XP when player is close, with cooldown
-      if (d2 < lm.r * lm.r && lm.cooldown <= 0) {
-        game.xp += 1;
-        game.score += 5;
-        lm.cooldown = 1.5;
-        burst(lm.x, lm.y, '#5fe6c4', 4, 80);
-      }
-    } else if (lm.kind === 'slowfield') {
-      // slow enemies within range
-      if (d2 < (lm.r + 30) * (lm.r + 30)) {
-        for (const e of game.enemies) {
-          if (e.dead) continue;
-          if (dist2(e.x, e.y, lm.x, lm.y) < lm.r * lm.r) {
-            e.x -= (e.x - lm.x) * 0.3 * dt;
-            e.y -= (e.y - lm.y) * 0.3 * dt;
-          }
-        }
-      }
-    }
-  }
-}
-
 function updatePickups(p, dt) {
-  // goal gradient: when XP > 75% of level, boost pickup attraction
+  const rangeMult = comboRangeScale(game.combo);
   const xpRatio = game.xpNeed > 0 ? game.xp / game.xpNeed : 0;
   const rangeBoost = xpRatio > 0.75 ? 1.4 : 1.0;
 
   compactInPlace(game.gems, g => {
     g.life -= dt; g.bob += dt * 5;
     const d2 = dist2(g.x, g.y, p.x, p.y);
-    const effectiveRange = p.range * rangeBoost;
+    const effectiveRange = p.range * rangeMult * rangeBoost;
     if (d2 < effectiveRange * effectiveRange) {
       const d = Math.sqrt(d2) || 1;
       const pull = lerp(60, 560, 1 - clamp(d / effectiveRange, 0, 1));
