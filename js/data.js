@@ -32,8 +32,8 @@ export const UPGRADES = [
   { id: 'dash',  ic: '↯', nm: 'Phase Drive',     ds: '-35% dash cooldown',              tier: 'common', acc: '#9a7bff',
     apply: p => p.dashCd *= 0.65 },
 
-  { id: 'multi', ic: '⋔', nm: 'Split Barrel',    ds: '+1 projectile per shot',          tier: 'rare',   acc: '#5fe6c4',
-    apply: p => { p.projCount = Math.min(p.projCount + 1, 5); p.spread = Math.min(p.spread + 0.06, 0.55); } },
+  { id: 'multi', ic: '⋔', nm: 'Split Barrel',    ds: '+2 projectiles per shot',         tier: 'rare',   acc: '#5fe6c4',
+    apply: p => { p.projCount = Math.min(p.projCount + 2, 7); p.spread = Math.min(p.spread + 0.08, 0.55); } },
   { id: 'pierce',ic: '⇶', nm: 'Railshot',        ds: 'projectiles pierce +1 enemy',     tier: 'rare',   acc: '#7bd0ff',
     apply: p => p.pierce++ },
   { id: 'regen', ic: '✚', nm: 'Nanoweave',       ds: 'regen +1.5 HP/sec',               tier: 'rare',   acc: '#5fe6c4',
