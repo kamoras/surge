@@ -18,23 +18,24 @@ const PREVENT = ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '];
 let lastTouchTap = 0;
 
 /**
- * @param {{onDash:Function, onPause:Function, onMute:Function}} handlers
+ * @param {{onSurge:Function, onDash:Function, onPause:Function, onMute:Function}} handlers
  */
-export function initInput({ onDash, onPause, onMute }) {
+export function initInput({ onSurge, onDash, onPause, onMute }) {
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (PREVENT.includes(k)) e.preventDefault();
     keys[k] = true;
     if (k === 'p') onPause();
     if (k === 'm') onMute();
-    if ((k === ' ' || k === 'shift') && !e.repeat) onDash();
+    if (k === ' ' && !e.repeat) onSurge();
+    if (k === 'shift' && !e.repeat) onDash();
   });
   window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
   cv.addEventListener('touchstart', e => {
     if (game.state !== 'playing') return;
     const now = performance.now();
-    if (now - lastTouchTap < 280) onDash();   // double-tap to dash
+    if (now - lastTouchTap < 280) onDash();   // double-tap to dash (surge is the button)
     lastTouchTap = now;
     const t = e.changedTouches[0];
     touch.active = true;

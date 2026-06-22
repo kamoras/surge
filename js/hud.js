@@ -17,6 +17,7 @@ import { resize, updateCamera, WORLD_W, WORLD_H, W, H } from './canvas.js';
 import { Sound } from './audio.js';
 import { burst } from './effects.js';
 import { makePlayer } from './entities.js';
+import { rand } from './utils.js';
 import { $, show, hide, fmtTime } from './dom.js';
 import { MILESTONES } from './data.js';
 import { resetTutorial } from './tutorial.js';
@@ -26,6 +27,7 @@ function cacheDom() {
   dom = {
     hpFill: $('hpFill'), hpLabel: $('hpLabel'),
     xpFill: $('xpFill'), xpLabel: $('xpLabel'),
+    surgeFill: $('surgeFill'), surgeLabel: $('surgeLabel'),
     timer: $('timer'), kills: $('kills'), score: $('score'),
     comboLine: $('comboLine'), muteBtn: $('muteBtn'), hud: $('hud'), dashBtn: $('dashBtn'),
     startBest: $('startBest'),
@@ -44,8 +46,13 @@ export function updateHUD() {
   const xpPct = Math.max(0, Math.min(game.xp / game.xpNeed * 100, 100));
   dom.xpFill.style.width = xpPct + '%';
   dom.xpLabel.textContent = 'LV ' + game.level;
-  // goal gradient: XP bar pulses when close to leveling
   dom.xpFill.style.opacity = xpPct > 75 ? (0.85 + Math.sin(game.time * 8) * 0.15) : '';
+
+  // surge meter
+  const surgePct = Math.max(0, Math.min(p.surge / p.surgeMax * 100, 100));
+  dom.surgeFill.style.width = surgePct + '%';
+  dom.surgeLabel.textContent = surgePct >= 100 ? 'SURGE READY' : 'SURGE';
+  dom.surgeFill.style.opacity = surgePct >= 80 ? (0.8 + Math.sin(game.time * 10) * 0.2) : '';
 
   dom.timer.textContent = fmtTime(game.time);
   dom.kills.textContent = game.kills;
@@ -97,8 +104,21 @@ export function startGame() {
   });
   game.player = makePlayer();
   game.player.iframe = 1.5;
-  // snap camera to player immediately (no lag on first frame)
   updateCamera(game.player.x, game.player.y, 99);
+  // generate world landmarks (avoid center spawn area)
+  game.landmarks = [];
+  for (let i = 0; i < 8; i++) {
+    let lx, ly;
+    do {
+      lx = rand(120, WORLD_W - 120);
+      ly = rand(120, WORLD_H - 120);
+    } while (Math.abs(lx - WORLD_W / 2) < 300 && Math.abs(ly - WORLD_H / 2) < 300);
+    game.landmarks.push({
+      x: lx, y: ly, r: rand(40, 65),
+      kind: i < 4 ? 'xpwell' : 'slowfield',
+      cooldown: 0, pulse: rand(0, 6.28),
+    });
+  }
   resetTutorial();
   hide('start'); hide('over'); hide('pause'); hide('levelup');
   dom.hud.classList.add('on');

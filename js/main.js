@@ -8,7 +8,7 @@
 import { resize } from './canvas.js';
 import { game } from './state.js';
 import { initInput } from './input.js';
-import { tryDash } from './entities.js';
+import { tryDash, trySurge } from './entities.js';
 import { update } from './update.js';
 import { render } from './render.js';
 import {
@@ -23,10 +23,10 @@ $('resumeBtn').onclick = togglePause;
 $('muteBtn').onclick = toggleMute;
 $('shareBtn').onclick = shareRun;
 const dashBtnEl = $('dashBtn');
-dashBtnEl.addEventListener('touchstart', e => { e.preventDefault(); tryDash(); }, { passive: false });
+dashBtnEl.addEventListener('touchstart', e => { e.preventDefault(); trySurge(); }, { passive: false });
 initStartScreen();
 
-initInput({ onDash: tryDash, onPause: togglePause, onMute: toggleMute });
+initInput({ onSurge: trySurge, onDash: tryDash, onPause: togglePause, onMute: toggleMute });
 
 function loop(now) {
   let dt = (now - game.lastT) / 1000; game.lastT = now;

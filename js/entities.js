@@ -15,13 +15,17 @@ import { keys, touch } from './input.js';
 export function makePlayer() {
   return {
     x: WORLD_W / 2, y: WORLD_H / 2, r: 13, hp: 100, maxHp: 100,
-    speed: 225, dmg: 9, fireRate: 0.42, projSpeed: 520, projCount: 1,
+    speed: 225, dmg: 9, fireRate: 0.48, projSpeed: 520, projCount: 1,
     pierce: 0, range: 95, regen: 0, aim: 0,
     iframe: 0, muzzle: 0, projSize: 4.2, spread: 0.18,
     crit: 0, critMult: 2.1, lifesteal: 0,
     orbCount: 0, orbAngle: 0,
-    dashCd: 2.2, dashTimer: 0, dashing: 0, dashVX: 0, dashVY: 0,
+    dashCd: 1.8, dashTimer: 0, dashing: 0, dashVX: 0, dashVY: 0,
     furyScale: 0, dashExplode: false, chainLightning: false,
+    // surge system
+    surge: 0, surgeMax: 100, surgeChargeRate: 8,
+    surgeRadius: 180, surgeDmgMult: 1.0,
+    surgeActive: 0, surgeRing: 0, surgeNova: false,
   };
 }
 
@@ -82,6 +86,19 @@ export function spawnElite() {
   floatText(camX + W / 2, camY + 70, 'ELITE INCOMING', '#ff7ad0', true);
   game.shake = Math.min(game.shake + 4, 10);
   Sound.elite();
+}
+
+/** Release the surge shockwave. Damage and radius scale with charge level. */
+export function trySurge() {
+  if (game.state !== 'playing') return;
+  const p = game.player;
+  if (!p || p.surge < 20) return;  // need at least 20% charge
+  const pct = p.surge / p.surgeMax;
+  p.surgeActive = pct;
+  p.surgeRing = 0;
+  p.surge = 0;
+  Sound.bomb();
+  if (pct > 0.7) game.shake = Math.min(game.shake + 6, 10);
 }
 
 /** Dash in the current input direction (or last move dir), with i-frames. */

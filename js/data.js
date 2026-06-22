@@ -52,15 +52,23 @@ export const UPGRADES = [
   { id: 'fury',  ic: '⚡', nm: 'Fury Engine',     ds: '+6% damage per combo hit (caps at +72%)', tier: 'rare', acc: '#ff7ad0',
     apply: p => p.furyScale += 0.06 },
 
+  // -- surge upgrades (rare) --
+  { id: 'scharge',ic: '⚡', nm: 'Surge Capacitor', ds: '+40% surge charge speed',         tier: 'rare',   acc: '#9a7bff',
+    apply: p => p.surgeChargeRate *= 1.4 },
+  { id: 'sradius',ic: '◎', nm: 'Surge Amplifier', ds: '+35% surge blast radius',         tier: 'rare',   acc: '#9a7bff',
+    apply: p => p.surgeRadius *= 1.35 },
+  { id: 'sdmg',   ic: '⚔', nm: 'Surge Overload',  ds: '+40% surge damage',               tier: 'rare',   acc: '#ff9d3d',
+    apply: p => p.surgeDmgMult *= 1.4 },
+
   // -- legendary (only offered at LV 5+, game-changing) --
-  { id: 'storm',  ic: '⚙', nm: 'Bullet Storm',   ds: 'double all projectile counts',    tier: 'legendary', acc: '#ffce4f',
-    apply: p => { p.projCount *= 2; p.spread = Math.min(p.spread + 0.08, 0.7); } },
   { id: 'titan',  ic: '◆', nm: 'Titan Shell',     ds: '+60 max HP, +2 HP/sec regen',     tier: 'legendary', acc: '#ff5d52',
     apply: p => { p.maxHp += 60; p.hp = Math.min(p.maxHp, p.hp + 60); p.regen += 2; } },
   { id: 'void',   ic: '◉', nm: 'Void Dash',       ds: 'dash explodes for 3x damage in a huge radius', tier: 'legendary', acc: '#9a7bff',
     apply: p => p.dashExplode = true },
   { id: 'chain',  ic: '⚡', nm: 'Chain Lightning', ds: 'kills zap a nearby enemy for 40% damage', tier: 'legendary', acc: '#7bd0ff',
     apply: p => p.chainLightning = true },
+  { id: 'nova',   ic: '✺', nm: 'Surge Nova',      ds: 'surge fully recharges on kill during blast', tier: 'legendary', acc: '#ffce4f',
+    apply: p => p.surgeNova = true },
 ];
 
 export const MILESTONES = [25, 50, 100, 200, 350, 500, 750, 1000];

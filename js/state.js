@@ -58,6 +58,7 @@ export const game = {
   nextMilestone: 0,
   deathTimer: 0,
   graceTimer: 0,
+  landmarks: [],
 };
 game.best = loadBest();
 game.bestCombo = loadBestCombo();

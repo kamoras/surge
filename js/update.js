@@ -49,6 +49,8 @@ export function update(dt) {
   updateBullets(dt);
   updateEnemies(p, dt);
   updateOrbs(p, dt);
+  updateSurge(p, dt);
+  updateLandmarks(p, dt);
   updatePickups(p, dt);
   updateEphemera(dt);
 
@@ -287,6 +289,73 @@ function updateOrbs(p, dt) {
       if (dist2(ox, oy, e.x, e.y) < rr * rr) {
         damageEnemy(e, od, ox, oy, true);
         e.orbCd = 0.3;
+      }
+    }
+  }
+}
+
+function updateSurge(p, dt) {
+  // charge: base rate + bonus per nearby enemy (proximity = power)
+  const chargeRadius = 160;
+  let nearbyCount = 0;
+  for (const e of game.enemies) {
+    if (e.dead) continue;
+    if (dist2(p.x, p.y, e.x, e.y) < chargeRadius * chargeRadius) nearbyCount++;
+  }
+  const chargeRate = p.surgeChargeRate + nearbyCount * 4;
+  p.surge = Math.min(p.surgeMax, p.surge + chargeRate * dt);
+
+  // expanding shockwave when surge is released
+  if (p.surgeActive > 0) {
+    const maxR = p.surgeRadius * (0.5 + p.surgeActive * 0.8);
+    p.surgeRing += maxR * 3.5 * dt;  // expand speed
+    if (p.surgeRing < maxR) {
+      // damage enemies the ring passes through
+      const r2inner = Math.max(0, p.surgeRing - 30);
+      for (const e of game.enemies) {
+        if (e.dead || e.orbCd > 0) continue;
+        const d = Math.sqrt(dist2(p.x, p.y, e.x, e.y));
+        if (d >= r2inner && d <= p.surgeRing + 10) {
+          const dmg = p.dmg * 2.5 * p.surgeActive * p.surgeDmgMult;
+          damageEnemy(e, dmg, e.x, e.y, true);
+          e.orbCd = 0.4;
+          // knockback enemies away from player
+          const ang = Math.atan2(e.y - p.y, e.x - p.x);
+          const kb = 60 * p.surgeActive;
+          e.x += Math.cos(ang) * kb;
+          e.y += Math.sin(ang) * kb;
+        }
+      }
+    } else {
+      p.surgeActive = 0;
+    }
+  }
+}
+
+function updateLandmarks(p, dt) {
+  for (const lm of game.landmarks) {
+    lm.pulse += dt * 2;
+    if (lm.cooldown > 0) lm.cooldown -= dt;
+    const d2 = dist2(p.x, p.y, lm.x, lm.y);
+
+    if (lm.kind === 'xpwell') {
+      // give XP when player is close, with cooldown
+      if (d2 < lm.r * lm.r && lm.cooldown <= 0) {
+        game.xp += 1;
+        game.score += 5;
+        lm.cooldown = 1.5;
+        burst(lm.x, lm.y, '#5fe6c4', 4, 80);
+      }
+    } else if (lm.kind === 'slowfield') {
+      // slow enemies within range
+      if (d2 < (lm.r + 30) * (lm.r + 30)) {
+        for (const e of game.enemies) {
+          if (e.dead) continue;
+          if (dist2(e.x, e.y, lm.x, lm.y) < lm.r * lm.r) {
+            e.x -= (e.x - lm.x) * 0.3 * dt;
+            e.y -= (e.y - lm.y) * 0.3 * dt;
+          }
+        }
       }
     }
   }

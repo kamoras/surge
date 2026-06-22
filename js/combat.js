@@ -17,7 +17,7 @@ import { offerUpgrades } from './upgrades.js';
 import { triggerDeath } from './hud.js';
 
 export function fireWeapon(p) {
-  const n = p.projCount;
+  const n = Math.min(p.projCount, 8);  // cap visible projectiles
   const base = p.aim;
   const fury = p.furyScale > 0
     ? 1 + clamp(game.combo * p.furyScale, 0, 0.72)
@@ -66,8 +66,9 @@ function killEnemy(e) {
   if (game.combo > game.maxCombo) game.maxCombo = game.combo;
   game.score += Math.round(e.score * comboMult());
   if (p.lifesteal > 0) p.hp = Math.min(p.maxHp, p.hp + p.lifesteal);
+  // surge nova: kills during active surge refill the meter
+  if (p.surgeNova && p.surgeActive > 0) p.surge = p.surgeMax;
 
-  // escalating kill pitch (variable ratio audio reinforcement)
   Sound.kill(game.combo);
 
   // combo milestone fanfare every 10 kills in a combo (variable ratio reward)
@@ -185,6 +186,8 @@ export function hurtPlayer(dmg) {
   const p = game.player;
   if (game.graceTimer > 0) return;
   p.hp -= dmg; p.iframe = 0.6;
+  // getting hit drains surge charge (losing stored power = loss aversion)
+  p.surge = Math.max(0, p.surge - p.surgeMax * 0.25);
   const lostCombo = game.combo;
   game.combo = Math.floor(game.combo * 0.4);
   // flash the combo counter red when losing a big combo (loss aversion feedback)

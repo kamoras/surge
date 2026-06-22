@@ -48,6 +48,7 @@ export function render() {
   drawStars();
   drawGrid();
   drawWorldBorder();
+  drawLandmarks();
 
   const p = game.player;
 
@@ -55,7 +56,7 @@ export function render() {
   drawBullets();
   drawEnemies();
   drawParticles();
-  if (p) { drawPlayer(p); drawOrbs(p); }
+  if (p) { drawPlayer(p); drawOrbs(p); drawSurgeRing(p); }
   drawFloaters();
   ctx.restore();
 
@@ -393,10 +394,85 @@ function drawTouchJoystick() {
   ctx.globalAlpha = 1;
 }
 
+function drawSurgeRing(p) {
+  // expanding shockwave when surge is released
+  if (p.surgeActive > 0) {
+    const maxR = p.surgeRadius * (0.5 + p.surgeActive * 0.8);
+    const progress = clamp(p.surgeRing / maxR, 0, 1);
+    const alpha = (1 - progress) * 0.7;
+    ctx.strokeStyle = 'rgba(154,123,255,' + alpha + ')';
+    ctx.lineWidth = 6 * (1 - progress) + 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.surgeRing, 0, TAU); ctx.stroke();
+    // inner glow
+    ctx.strokeStyle = 'rgba(199,123,255,' + (alpha * 0.5) + ')';
+    ctx.lineWidth = 14 * (1 - progress);
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.surgeRing, 0, TAU); ctx.stroke();
+  }
+
+  // charge level indicator: glowing ring around player
+  if (p.surge > 5 && p.surgeActive <= 0) {
+    const pct = p.surge / p.surgeMax;
+    const alpha = 0.15 + pct * 0.4;
+    ctx.strokeStyle = pct >= 1 ? 'rgba(199,123,255,' + alpha + ')' : 'rgba(154,123,255,' + alpha + ')';
+    ctx.lineWidth = 2 + pct * 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r + 22, -Math.PI / 2, -Math.PI / 2 + pct * TAU);
+    ctx.stroke();
+  }
+}
+
 function drawWorldBorder() {
-  ctx.strokeStyle = 'rgba(154,123,255,0.2)';
+  // glowing border walls
+  const bw = 6;
+  ctx.fillStyle = 'rgba(154,123,255,0.08)';
+  ctx.fillRect(0, 0, WORLD_W, bw);             // top
+  ctx.fillRect(0, WORLD_H - bw, WORLD_W, bw);  // bottom
+  ctx.fillRect(0, 0, bw, WORLD_H);             // left
+  ctx.fillRect(WORLD_W - bw, 0, bw, WORLD_H);  // right
+  ctx.strokeStyle = 'rgba(154,123,255,0.35)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(0, 0, WORLD_W, WORLD_H);
+  ctx.strokeRect(1, 1, WORLD_W - 2, WORLD_H - 2);
+
+  // corner markers
+  const cm = 40;
+  ctx.strokeStyle = 'rgba(154,123,255,0.5)';
+  ctx.lineWidth = 3;
+  for (const [cx, cy, dx, dy] of [[0,0,1,1],[WORLD_W,0,-1,1],[0,WORLD_H,1,-1],[WORLD_W,WORLD_H,-1,-1]]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx * cm, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * cm);
+    ctx.stroke();
+  }
+}
+
+function drawLandmarks() {
+  for (const lm of game.landmarks) {
+    const pulse = 0.6 + Math.sin(lm.pulse) * 0.2;
+    const onCooldown = lm.cooldown > 0;
+
+    if (lm.kind === 'xpwell') {
+      // green ring that pulses, dimmer on cooldown
+      ctx.globalAlpha = onCooldown ? 0.15 : 0.35 * pulse;
+      ctx.strokeStyle = '#5fe6c4';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(lm.x, lm.y, lm.r * pulse, 0, TAU); ctx.stroke();
+      // center dot
+      ctx.fillStyle = '#5fe6c4';
+      ctx.globalAlpha = onCooldown ? 0.1 : 0.5;
+      ctx.beginPath(); ctx.arc(lm.x, lm.y, 4, 0, TAU); ctx.fill();
+    } else {
+      // violet slow field
+      ctx.globalAlpha = 0.08 + Math.sin(lm.pulse * 0.7) * 0.04;
+      ctx.fillStyle = '#9a7bff';
+      ctx.beginPath(); ctx.arc(lm.x, lm.y, lm.r, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = '#9a7bff';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.arc(lm.x, lm.y, lm.r, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawMinimap(p) {
