@@ -85,6 +85,10 @@ function killEnemy(e) {
     for (let i = 0; i < drops; i++) {
       game.gems.push({ kind: 'xp', x: e.x + rand(-8, 8), y: e.y + rand(-8, 8), val: Math.ceil(e.xp / drops), life: 9, bob: rand(0, TAU) });
     }
+    // small chance for any kill to drop a heart (variable ratio reward)
+    if (Math.random() < 0.04) {
+      game.gems.push({ kind: 'heart', x: e.x, y: e.y, val: 0, life: 10, bob: 0 });
+    }
     if (e.type === 'splitter') {
       for (let i = 0; i < 2; i++) addEnemy('grunt', { x: e.x + rand(-12, 12), y: e.y + rand(-12, 12) });
     }

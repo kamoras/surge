@@ -29,7 +29,7 @@ function cacheDom() {
     comboLine: $('comboLine'), muteBtn: $('muteBtn'), hud: $('hud'),
     startBest: $('startBest'),
     oTime: $('oTime'), oScore: $('oScore'), oKills: $('oKills'),
-    oLevel: $('oLevel'), oCombo: $('oCombo'), oRank: $('oRank'),
+    oLevel: $('oLevel'), oCombo: $('oCombo'), oWave: $('oWave'), oRank: $('oRank'),
     bestTag: $('bestTag'), shareBtn: $('shareBtn'),
     nearMiss: $('nearMiss'),
   };
@@ -86,7 +86,7 @@ export function startGame() {
     eliteTimer: 42, waveTimer: 0, waveNum: 0, waveLull: 0,
     lastMoveX: 1, lastMoveY: 0,
     enemies: [], bullets: [], gems: [], parts: [], floats: [],
-    spawnTimer: 0.5, fireTimer: 0, level: 1, xp: 0, xpNeed: 6, pendingLevels: 0,
+    spawnTimer: 0.3, fireTimer: 0, level: 1, xp: 0, xpNeed: 6, pendingLevels: 0,
     nextMilestone: 0, deathTimer: 0,
     graceTimer: 1.5,
   });
@@ -128,6 +128,7 @@ export function endGame() {
   dom.oKills.textContent = game.kills;
   dom.oLevel.textContent = game.level;
   dom.oCombo.textContent = game.maxCombo;
+  dom.oWave.textContent = game.waveNum;
   const rank = scoreRank(game.score);
   dom.oRank.textContent = rank;
   dom.oRank.setAttribute('data-rank', rank);

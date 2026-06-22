@@ -48,14 +48,14 @@ export const UPGRADES = [
 /** Kill milestones that trigger announcements and bonus XP. */
 export const MILESTONES = [25, 50, 100, 200, 350, 500, 750, 1000];
 
-/** Wave definitions: each entry is [startTime, label, extraSpawns]. */
+/** Wave definitions: each entry is [startTime, label]. */
 export const WAVES = [
-  [0,   'WAVE 1',  0],
-  [30,  'WAVE 2',  1],
-  [60,  'WAVE 3',  2],
-  [100, 'WAVE 4',  3],
-  [150, 'WAVE 5',  4],
-  [210, 'WAVE 6',  6],
-  [280, 'WAVE 7',  8],
-  [360, 'WAVE 8',  10],
+  [0,   'FIRST BLOOD'],
+  [30,  'THE SWARM BUILDS'],
+  [60,  'NO MERCY'],
+  [100, 'RELENTLESS'],
+  [150, 'CRITICAL MASS'],
+  [210, 'DESPERATION'],
+  [280, 'HELL WAVE'],
+  [360, 'ENDURANCE'],
 ];

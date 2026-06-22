@@ -32,6 +32,7 @@ export function render() {
   drawParticles();
   if (p) { drawPlayer(p); drawOrbs(p); }
   drawFloaters();
+  if (p) drawDangerIndicators(p);
 
   ctx.restore();
 
@@ -285,4 +286,32 @@ function drawEnemy(e) {
     ctx.fillStyle = e.color;
     ctx.fillRect(e.x - w / 2, e.y - e.r - 9, w * clamp(e.hp / e.maxHp, 0, 1), h);
   }
+}
+
+/** Small arrows at screen edges pointing toward off-screen enemies. */
+function drawDangerIndicators(p) {
+  const margin = 18;
+  for (const e of game.enemies) {
+    if (e.dead) continue;
+    // only show for enemies actually off-screen
+    if (e.x > margin && e.x < W - margin && e.y > margin && e.y < H - margin) continue;
+    const ang = Math.atan2(e.y - p.y, e.x - p.x);
+    // clamp indicator to screen edge
+    const ix = clamp(e.x, margin, W - margin);
+    const iy = clamp(e.y, margin, H - margin);
+    const size = e.isElite ? 7 : 4;
+    ctx.save();
+    ctx.translate(ix, iy);
+    ctx.rotate(ang);
+    ctx.globalAlpha = e.isElite ? 0.9 : 0.5;
+    ctx.fillStyle = e.color;
+    ctx.beginPath();
+    ctx.moveTo(size, 0);
+    ctx.lineTo(-size, -size * 0.7);
+    ctx.lineTo(-size, size * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }

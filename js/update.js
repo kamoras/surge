@@ -76,7 +76,9 @@ function updateSpawning(dt) {
   const hpRatio = p.hp / p.maxHp;
   const ddaFactor = hpRatio < 0.3 ? 1.6 : hpRatio < 0.5 ? 1.2 : 1.0;
 
-  const spawnInterval = Math.max(0.16, (1.1 - t * 0.012) * ddaFactor);
+  // faster spawns in the first 8 seconds so the game feels immediate
+  const baseInterval = t < 8 ? 0.7 : 1.1 - t * 0.012;
+  const spawnInterval = Math.max(0.16, baseInterval * ddaFactor);
   game.spawnTimer -= dt;
   if (game.spawnTimer <= 0) {
     game.spawnTimer = spawnInterval;
@@ -142,6 +144,10 @@ function updatePlayerMovement(p, dt) {
   } else {
     p.x = clamp(p.x + mx * p.speed * dt, p.r, W - p.r);
     p.y = clamp(p.y + my * p.speed * dt, p.r, H - p.r);
+    // subtle movement trail when actively moving
+    if (mag > 0 && Math.random() < 0.35) {
+      game.parts.push({ x: p.x - mx * 8, y: p.y - my * 8, vx: 0, vy: 0, life: 0.15, max: 0.15, color: 'rgba(243,234,215,0.2)', size: 2.5 });
+    }
   }
 }
 
