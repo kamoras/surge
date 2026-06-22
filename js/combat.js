@@ -24,8 +24,10 @@ export function fireWeapon(p) {
     : 1;
   const comboDmg = comboDmgScale(game.combo);
   const dmg = p.dmg * fury * comboDmg;
-  for (let i = 0; i < n; i++) {
-    const off = n === 1 ? 0 : (i - (n - 1) / 2) * p.spread;
+  // for even counts, use n+1 slots so a projectile always fires dead-center
+  const slots = (n > 1 && n % 2 === 0) ? n + 1 : n;
+  for (let i = 0; i < slots; i++) {
+    const off = slots === 1 ? 0 : (i - (slots - 1) / 2) * p.spread;
     const a = base + off;
     game.bullets.push({
       x: p.x + Math.cos(a) * p.r, y: p.y + Math.sin(a) * p.r,

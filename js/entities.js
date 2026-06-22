@@ -65,7 +65,7 @@ export function addEnemy(type, pos) {
   game.enemies.push({
     type, x: pos.x, y: pos.y, r: base.r,
     hp: base.hp * hpScale, maxHp: base.hp * hpScale,
-    speed: finalSpd, dmg: base.dmg,
+    speed: finalSpd, dmg: Math.round(base.dmg * (1 + t / 90)),
     color: base.color, xp: base.xp, score: base.score,
     flash: 0, wob: rand(0, TAU), orbCd: 0,
     // warper blink state: visible for 0.6s, then teleport, repeat

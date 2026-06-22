@@ -7,7 +7,7 @@
    ============================================================ */
 
 /** HP drain per second when combo is at 0 (forces engagement). */
-export const ZERO_COMBO_DRAIN = 3.0;
+export const ZERO_COMBO_DRAIN = 5.0;
 
 /* ---------- best-score persistence (localStorage) ---------- */
 const BEST_KEY = 'surge_best_v1';

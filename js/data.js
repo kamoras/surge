@@ -75,7 +75,7 @@ export const WAVES = [
 ];
 
 /** Max enemies alive at once. Keeps the screen readable. */
-export const ENEMY_CAP = 22;
+export const ENEMY_CAP = 28;
 
 /**
  * Combo power scaling. Combo multiplies damage, speed, and pickup
