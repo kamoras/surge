@@ -165,7 +165,7 @@ function updatePlayerMovement(p, dt) {
         if (dist2(p.x, p.y, e.x, e.y) < r2) damageEnemy(e, dmg, p.x, p.y, true);
       }
     }
-    p.dashVX *= 0.84; p.dashVY *= 0.84;
+    p.dashVX *= 0.90; p.dashVY *= 0.90;
   } else {
     p.x = clamp(p.x + mx * effectiveSpeed * dt, p.r, WORLD_W - p.r);
     p.y = clamp(p.y + my * effectiveSpeed * dt, p.r, WORLD_H - p.r);

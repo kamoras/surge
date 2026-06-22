@@ -56,13 +56,16 @@ export function spawnEnemy() {
 
 export function addEnemy(type, pos) {
   const base = ETYPES[type], t = game.time;
-  // gentle early ramp, steeper after 90s so the game eventually overwhelms
   const hpScale = t < 90 ? 1 + t / 50 : 1 + 90 / 50 + (t - 90) / 35;
-  const spdScale = t < 90 ? 1 + t / 220 : 1 + 90 / 220 + (t - 90) / 160;
+  let spdScale = t < 90 ? 1 + t / 220 : 1 + 90 / 220 + (t - 90) / 160;
+  // cap speed scaling so late-game enemies are tough but not undodgeable
+  spdScale = Math.min(spdScale, 2.2);
+  // rushers get a softer cap since their base speed is already high
+  const finalSpd = type === 'rusher' ? base.speed * Math.min(spdScale, 1.6) : base.speed * spdScale;
   game.enemies.push({
     type, x: pos.x, y: pos.y, r: base.r,
     hp: base.hp * hpScale, maxHp: base.hp * hpScale,
-    speed: base.speed * spdScale, dmg: base.dmg,
+    speed: finalSpd, dmg: base.dmg,
     color: base.color, xp: base.xp, score: base.score,
     flash: 0, wob: rand(0, TAU), orbCd: 0,
     // warper blink state: visible for 0.6s, then teleport, repeat
@@ -120,10 +123,10 @@ export function tryDash() {
   else { dx = game.lastMoveX; dy = game.lastMoveY; }
   const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
 
-  const sp = p.speed * 3.6;
+  const sp = p.speed * 5.0;
   p.dashVX = dx * sp; p.dashVY = dy * sp;
-  p.dashing = 0.14;
+  p.dashing = 0.22;
   p.dashTimer = p.dashCd;
-  p.iframe = Math.max(p.iframe, 0.24);
+  p.iframe = Math.max(p.iframe, 0.30);
   Sound.dash();
 }
